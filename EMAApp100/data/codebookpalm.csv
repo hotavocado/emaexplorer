@@ -1,0 +1,315 @@
+names,question,response
+ID,Subject ID number,Six digit number: XXXXX
+day,Day of assessment,From 1 to 14
+signal,Assessment index on a certain day,From 1 to 4
+Morning,Dummy variable indicating morning assessment,"1 = yes, 0 = no"
+Noon,Dummy variable indicating noon assessment,"1 = yes, 0 = no"
+Afternoon,Dummy variable indicating afternoon assessment,"1 = yes, 0 = no"
+Evening,Dummy variable indicating evening assessment,"1 = yes, 0 = no"
+time,Timestamp of assessment,NA
+TIME0,NA,NA
+TIME1,NA,NA
+secDay,NA,NA
+totalRT,NA,NA
+missed,NA,NA
+RowProperty,NA,NA
+Alcohol,any alcohol use since last questionnaire ,"1 = yes, 0 = no"
+Dizzy,"""""","1 = yes, 0 = no"
+evwork,event related to work,"1 = yes, 0 = no"
+eveduc,event related to education,"1 = yes, 0 = no"
+evff,event related to friends or family,"1 = yes, 0 = no"
+evcoll,event related to interactions with colleagues,"1 = yes, 0 = no"
+evstrang,event related to interactions with strangers,"1 = yes, 0 = no"
+evhous,event related to housing,"1 = yes, 0 = no"
+evleisur,event related to leisure activities,"1 = yes, 0 = no"
+evhealth,event related to health issues ,"1 = yes, 0 = no"
+evmoney,event related to money or finances ,"1 = yes, 0 = no"
+evrelig,event related to religion or spirituality,"1 = yes, 0 = no"
+evlegal,event related to legal issues,"1 = yes, 0 = no"
+evafschl,event related to after school activities,"1 = yes, 0 = no"
+evintstu,event related to interactions with students,"1 = yes, 0 = no"
+evtransp,"event related to travel, commuting or transportation","1 = yes, 0 = no"
+evother,other events,"1 = yes, 0 = no"
+Foodchi,These food questions were administered to a portion of sample. Chinese food,"1 = yes, 0 = no"
+Foodlow,These food questions were administered to a portion of sample. Low-fat or diet food,"1 = yes, 0 = no"
+Foodsalt,These food questions were administered to a portion of sample. Salty food.,"1 = yes, 0 = no"
+Foodsfdr,These food questions were administered to a portion of sample. Sugar-free or diet drinks,"1 = yes, 0 = no"
+Foodsffo,These food questions were administered to a portion of sample. Surgar-free or diet foods,"1 = yes, 0 = no"
+Foodav,avocado ,"1 = yes, 0 = no"
+Foodbrd,bread ,"1 = yes, 0 = no"
+Foodchs,cheese,"1 = yes, 0 = no"
+Foodchoc,chocolate,"1 = yes, 0 = no"
+Foodcitr,citrus fruit,"1 = yes, 0 = no"
+Fooddogs,hotdog,"1 = yes, 0 = no"
+Foodotdr,other dairy product,"1 = yes, 0 = no"
+Foodotfr,other fruits,"1 = yes, 0 = no"
+Foodotsg,other kinds of sausage,"1 = yes, 0 = no"
+Foodotfs,other types of fish,"1 = yes, 0 = no"
+Foodotvg,other vegetables,"1 = yes, 0 = no"
+Foodpean,peanuts or other nuts,"1 = yes, 0 = no"
+Foodpres,preserved meat,"1 = yes, 0 = no"
+Foodsalm,salmon or halibut,"1 = yes, 0 = no"
+Foodscal,scallops or shrimp,"1 = yes, 0 = no"
+Foodsoy,soy (soy sauce or tofu),"1 = yes, 0 = no"
+Foodsqua,squash,"1 = yes, 0 = no"
+Foodtom,tomato,"1 = yes, 0 = no"
+hungry,degree of hunger or appetite,Likert Scale 1-4
+active,active or aroused,Likert Scale 1-7
+Inbed,Time went to bed,Time in 30 minute intervals
+INBED0,NA,NA
+INBED1,NA,NA
+Light,how much did light bother you,Likert Scale 1-4
+Medsover,over the counter medication use to treat headache,"1 = yes, 0 = no"
+Medspres,prescription medication use to treat headache,"1 = yes, 0 = no"
+Noise,how much did noise bother you today,Likert Scale 1-4
+Odors,how much did certain odors bother you today,Likert Scale 1-4
+Sensit,how much more sensitive or easily hurt are you today than usual,Likert Scale 1-3
+cigaret,smoked cigarette,"1 = yes, 0 = no"
+othdrug,used other drug,"1 = yes, 0 = no"
+cannabis,smoked cannabis,"1 = yes, 0 = no"
+hdspeak,headache accompanied by difficulty speaking,"1 = yes, 0 = no"
+expbef,experienced speaking difficulty before headache onset,"1 = yes, 0 = no"
+expsame,experienced speaking difficulty at the same time as headache onset,"1 = yes, 0 = no"
+expafter,experienced speaking difficulty after headache onset,"1 = yes, 0 = no"
+noexp,did not experience difficulty speaking with headache,"1 = yes, 0 = no"
+hdintens,headache intensity,Likert Scale 1-7
+hdlight,degree to which light bothered you with headache,Likert Scale 1-4
+muscpain,had muscle pain with headache,NA
+hdnaus,degree to which felt nauseated or diarrhea with headache,Likert Scale 1-4
+hdnoise,degree to which noise bothered you with headache,Likert Scale 1-4
+hdnumb,had numbing or tingling with headache,"1 = yes, 0 = no"
+numbbef,numbing occurred before headache,"1 = yes, 0 = no"
+numbaft,numbing occurred after headache,"1 = yes, 0 = no"
+numbsam,numbing occurred at same time as headache,"1 = yes, 0 = no"
+nonumb,had no numbing or tingling,"1 = yes, 0 = no"
+hdodtrig,odor triggered headache,"1 = yes, 0 = no"
+hdodor,degree bothered by odors with headache,Likert Scale 1-4
+hdbend,did headache pain increase with bending over or climbing stairs,"1 = yes, 0 = no"
+hdthrob,headache pain was throbbing or pulsating,"1 = yes, 0 = no"
+visbef,visual symptoms occurred before headache onset,"1 = yes, 0 = no"
+vissame,visual symptoms occurred at same time as headache onset,"1 = yes, 0 = no"
+visafter,visual symptoms occurred after headache onset,"1 = yes, 0 = no"
+visnone,had no visual symptoms during headache,"1 = yes, 0 = no"
+Blind,blind spots during headache,"1 = yes, 0 = no"
+Blurred,blurred vision during headache,"1 = yes, 0 = no"
+Flashing,flashing lights during headache,"1 = yes, 0 = no"
+bothside,headache was on both sides of head,"1 = yes, 0 = no"
+leftside,headache was on left side of head,"1 = yes, 0 = no"
+rtside,headache was on right side of head,"1 = yes, 0 = no"
+chanside,headache moved from one side to another,"1 = yes, 0 = no"
+Energy,degree of energy right now,Likert Scale 1-7
+blindEOD,had blind spots or distorted vision over the day,"1 = yes, 0 = no"
+BlurEOD,had blurred or distorted vision over the day,"1 = yes, 0 = no"
+FlashEOD,saw flashing lights or shapes over the day,"1 = yes, 0 = no"
+diarrhea,had diarrhea over the day,"1 = yes, 0 = no"
+nausea,had nausea over the day,"1 = yes, 0 = no"
+painab,had abdominal pain over the day,"1 = yes, 0 = no"
+painst,had stomach pain over the day,"1 = yes, 0 = no"
+vomiting,had vomiting over the day,"1 = yes, 0 = no"
+agitat,how hard to still still now,Likert Scale 1-7
+alcquan,quanity of alcohol consumed since last questionnaire,Number of drinks 1-6
+Beer,drank beer,"1 = yes, 0 = no"
+Champ,drank champagne,"1 = yes, 0 = no"
+cocktail,drank cocktail,"1 = yes, 0 = no"
+otheralc,drank other alcoholic drink,"1 = yes, 0 = no"
+Rwine,drank red wine,"1 = yes, 0 = no"
+Whiskey,drank whisky,"1 = yes, 0 = no"
+Wwine,drank white wine,"1 = yes, 0 = no"
+birthcl,took birth control pills today,"1 = yes, 0 = no"
+boygirlfriend,"""""",Likert Scale 1-7
+caffeine,had drink with caffeine,"1 = yes, 0 = no"
+cafquan,how many drinks with caffeine,Number of drinks 1-6
+coffee,had coffee,"1 = yes, 0 = no"
+cafsoda,had soda,"1 = yes, 0 = no"
+othercaf,had other type of caffeinated drink,"1 = yes, 0 = no"
+tea,had tea,"1 = yes, 0 = no"
+comingon,did a prevention behavior because felt headache coming on,"1 = yes, 0 = no"
+Control,felt overwhelmed or out of control today,"1 = yes, 0 = no"
+choccrv,had craving for chocolate over day,"1 = yes, 0 = no"
+junkcrv,had craving for junk food over day,"1 = yes, 0 = no"
+othcrv,had craving for other food over day,"1 = yes, 0 = no"
+starccrv,had craving for starchy food over day,"1 = yes, 0 = no"
+sweetcrv,had craving for sweets over day,"1 = yes, 0 = no"
+crying,felt like crying over day,"1 = yes, 0 = no"
+dayper,what day of your period is it,Number from 1-9
+faint,did you faint today,"1 = yes, 0 = no"
+fmrelstr,family relationship stress today,Likert Scale 1-7
+distract,how distracted are you,Likert Scale 1-7
+globstr,how much overall stress for day,Likert Scale 1-7
+sad,how sad,Likert Scale 1-7
+headach,had headache since last questionnaire,"1 = yes, 0 = no"
+headoff,""""" ",Time in 1 hour intervals
+HEADO2,NA,NA
+HEADO3,NA,NA
+headon,""""" ",Time in 1 hour intervals
+HEADO0,NA,NA
+HEADO1,NA,NA
+healstr,degree of health stress over day,Likert Scale 1-7
+hrsleep,self-report of hours slept,Number 0-13
+less5h,less than 5 hours sleep,"1 = yes, 0 = no"
+hurthead,hurt head over day,"1 = yes, 0 = no"
+hdinterf,degree headache interfered with activities,Likert Scale 1-4
+irrit,how irritable now,Likert Scale 1-7
+mannoy,manic-like symptoms of being annoying or tiring to others over day,"1 = yes, 0 = no"
+msoc,manic-like symptoms of being more sociable over day,"1 = yes, 0 = no"
+mtalk,manic-like symptoms of being more talkative over day,"1 = yes, 0 = no"
+mcreat,manic-like symptoms of being more creative over day,"1 = yes, 0 = no"
+moptim,manic-like symptoms of being more optimistic over day,"1 = yes, 0 = no"
+mconf,manic-like symptoms of being more confident over day,"1 = yes, 0 = no"
+mtask,manic-like symptoms of getting tasks done over day,"1 = yes, 0 = no"
+mplan,manic-like symptoms of starting new projects over day,"1 = yes, 0 = no"
+msex,manic-like symptoms of being more interested in sexual activity over day,"1 = yes, 0 = no"
+mbuy,manic-like symptoms of buying more things over day,"1 = yes, 0 = no"
+mdrive,manic-like symptoms of driving faster over day,"1 = yes, 0 = no"
+margue,manic-like symptoms of arguing more over day,"1 = yes, 0 = no"
+mspend,manic-like symptoms of spending more  over day,"1 = yes, 0 = no"
+mrisk,manic-like symptoms of taking more risks over day,"1 = yes, 0 = no"
+meal,had meal or snack since last questionnaire,"1 = yes, 0 = no"
+mealsz,size of meal,Likert Scale 1-4
+mealtme," """"",Time in 1 hour intervals
+MEALT0,NA,NA
+MEALT1,NA,NA
+mishead,missed a questionnaire due to headache,"1 = yes, 0 = no"
+moneystr,financial stress over the day,Likert Scale 1-7
+nawake,number of awakenings at night,Number 0-4
+ngevent,degree of positive or negative impact of event,Likert Scale 1-7
+outbed,""""" ",Time in 30 minute intervals
+OUTBE0,NA,NA
+awaknght,awakened at night,"1 = yes, 0 = no"
+awakerly,awakened early,"1 = yes, 0 = no"
+diffawak,difficulty with awakening,"1 = yes, 0 = no"
+diffslp,difficulty falling asleep,"1 = yes, 0 = no"
+othrslp,other sleep problem,"1 = yes, 0 = no"
+period,had period that day,"1 = yes, 0 = no"
+phactive,more physically active over day,"1 = yes, 0 = no"
+breast,had breast tenderness over day,"1 = yes, 0 = no"
+bloated,felt bloated over day,"1 = yes, 0 = no"
+heartrac,heart racing over day,"1 = yes, 0 = no"
+physympMuscleorjointpain,muscle pain over day,"1 = yes, 0 = no"
+prevact,changed activities to prevent headache,"1 = yes, 0 = no"
+prevcoun,took overthecounter meds to prevent headache,"1 = yes, 0 = no"
+prevmed,took prescription meds to prevent headache,"1 = yes, 0 = no"
+prevnap,took a nap to prevent headache,"1 = yes, 0 = no"
+prevoth,did something else to prevent headache,"1 = yes, 0 = no"
+prevrel,used relaxation or other to prevent headache,"1 = yes, 0 = no"
+qlsleep,degree felt rested after sleep,Likert Scale 1-7
+racing,degree thoughts are racing,Likert Scale 1-7
+anxious,degree feels anxious,Likert Scale 1-7
+sknone,did not skip meals over day,"1 = yes, 0 = no"
+skbreak,skipped breakfast,"1 = yes, 0 = no"
+skdinner,skipped dinner,"1 = yes, 0 = no"
+sklunch,skipped lunch,"1 = yes, 0 = no"
+socstr,degree stress with friends over day,Likert Scale 1-7
+spousstr,degree stress with spouse or partner over day,Likert Scale 1-7
+stranstr,degree stress with strangers over day,Likert Scale 1-7
+hdsudden,headache came on suddenly,"1 = yes, 0 = no"
+tawake,""""" ","1 = yes, 0 = no"
+homewk,Doing homework,"1 = yes, 0 = no"
+eating,Eating,"1 = yes, 0 = no"
+chores,Household chores,"1 = yes, 0 = no"
+music,Listening to music ,"1 = yes, 0 = no"
+napping,Napping ,"1 = yes, 0 = no"
+nothing,Nothing or waiting ,"1 = yes, 0 = no"
+othract,Other activity ,"1 = yes, 0 = no"
+nonphysl,Other nonphysical leisure ,"1 = yes, 0 = no"
+hygiene,Personal hygiene care ,"1 = yes, 0 = no"
+physleis,Physical leisure or exercise ,"1 = yes, 0 = no"
+playgame,Playing games or with toys ,"1 = yes, 0 = no"
+sports,Playing sports ,"1 = yes, 0 = no"
+reading,Reading ,"1 = yes, 0 = no"
+sexacti,Sexual activity ,"1 = yes, 0 = no"
+shopping,shopping ,"1 = yes, 0 = no"
+talkpers,Talking in person ,"1 = yes, 0 = no"
+talkphon,Talking on the phone ,"1 = yes, 0 = no"
+travel,Traveling or commuting ,"1 = yes, 0 = no"
+computer,Using a computer ,"1 = yes, 0 = no"
+tv,Watching TV ,"1 = yes, 0 = no"
+working,Working paid or volunteer ,"1 = yes, 0 = no"
+home,In my own home  ,"1 = yes, 0 = no"
+homerf,In home of relative or friend,"1 = yes, 0 = no"
+workcl,at work or in class,"1 = yes, 0 = no"
+restbar,in a restaurant or bar,"1 = yes, 0 = no"
+storshop,"in a store, shop or mall","1 = yes, 0 = no"
+hospcl,"in a hospital, clinic or doctors office","1 = yes, 0 = no"
+vehic,"in a vehicle (car, bus etc)","1 = yes, 0 = no"
+pubbldg,in a public building,"1 = yes, 0 = no"
+parkgn,"in a park, garden or yard","1 = yes, 0 = no"
+gymstad,"in a gym, stadium or sports place","1 = yes, 0 = no"
+librar,in a library,"1 = yes, 0 = no"
+intcafe,in an internet cafe,"1 = yes, 0 = no"
+othrin,other inside,"1 = yes, 0 = no"
+othrout,other outside,"1 = yes, 0 = no"
+pet,with pet,"1 = yes, 0 = no"
+bfgf,with boyfriend or girlfriend,"1 = yes, 0 = no"
+collcl,with colleagues or classmates,"1 = yes, 0 = no"
+fampart,"with family, spouse or partner","1 = yes, 0 = no"
+friends,with friends,"1 = yes, 0 = no"
+bsitter,with babysitter or nanny,"1 = yes, 0 = no"
+alone,is alone,"1 = yes, 0 = no"
+withothr,with other people,"1 = yes, 0 = no"
+strange,with strangers,"1 = yes, 0 = no"
+coach,with coach or teacher,"1 = yes, 0 = no"
+workstr,stress experienced for the day with work related issues,"1 = yes, 0 = no"
+wheredz,did person become dizzy in specific location or situation,"1 = yes, 0 = no"
+yawn,did the person yawn over the day,"1 = yes, 0 = no"
+Nmeas1,number of minutes measured between 1:45 and 2 hours before EMA assessment ,number of minutes
+Nmeas2,number of minutes measured between 1:30 and 1:45 hours before EMA assessment ,number of minutes
+Nmeas3,number of minutes measured between 1:15 and 1:30 hours before EMA assessment ,number of minutes
+Nmeas4,number of minutes measured between 1 hour and 1:15 hours before EMA assessment ,number of minutes
+Nmeas5,number of minutes measured between 45 minutes and 1 hour before EMA assessment ,number of minutes
+Nmeas6,number of minutes measured between 30 and 45 minutes before EMA assessment ,number of minutes
+Nmeas7,number of minutes measured between 15 and 30 minutes before EMA assessment ,number of minutes
+Nmeas8,number of minutes measured for the 15 minutes before EMA assessment ,number of minutes
+Nmeas9,number of minutes measured for the 15 minutes after EMA assessment ,number of minutes
+Nmeas10,number of minutes measured between 15 and 30 minutes after EMA assessment ,number of minutes
+Nmeas11,number of minutes measured between 30 and 45 minutes after EMA assessment ,number of minutes
+Nmeas12,number of minutes measured between 45 minutes and 1 hour after EMA assessment ,number of minutes
+Nmeas13,number of minutes measured between 1 hour and 1:15 hours after EMA assessment ,number of minutes
+Nmeas14,number of minutes measured between 1:15 and 1:30 hours after EMA assessment ,number of minutes
+Nmeas15,number of minutes measured between 1:30 and 1:45 hours after EMA assessment ,number of minutes
+Nmeas16,number of minutes measured between 1:45 and 2 hours after EMA assessment ,number of minutes
+Actsum1,"activity counts between 1:45 and 2 hours before EMA assessment""
+",activity counts
+Actsum2,activity counts between 1:30 and 1:45 hours before EMA assessment ,activity counts
+Actsum3,activity counts between 1:15 and 1:30 hours before EMA assessment ,activity counts
+Actsum4,activity counts between 1 hour and 1:15 hours before EMA assessment ,activity counts
+Actsum5,activity counts between 45 minutes and 1 hour before EMA assessment ,activity counts
+Actsum6,activity counts between 30 and 45 minutes before EMA assessment ,activity counts
+Actsum7,activity counts between 15 and 30 minutes before EMA assessment ,activity counts
+Actsum8,activity counts  for the 15 minutes before EMA assessment ,activity counts
+Actsum9,activity counts  for the 15 minutes after EMA assessment ,activity counts
+Actsum10,activity counts between 15 and 30 minutes after EMA assessment ,activity counts
+Actsum11,activity counts between 30 and 45 minutes after EMA assessment ,activity counts
+Actsum12,activity counts between 45 minutes and 1 hour after EMA assessment ,activity counts
+Actsum13,activity counts between 1 hour and 1:15 hours after EMA assessment ,activity counts
+Actsum14,activity counts between 1:15 and 1:30 hours after EMA assessment ,activity counts
+Actsum15,activity counts between 1:30 and 1:45 hours after EMA assessment ,activity counts
+Actsum16,activity counts between 1:45 and 2 hours after EMA assessment ,activity counts
+sum120b,sum of activity for the two hours before EMA assessment ,activity counts
+sum120a,sum of activity for the two hours after EMA assessment ,activity counts
+numm120b,sum of minutes measured for the two hours before EMA assessment ,number of minutes
+numm120a,sum of minutes measured for the two hours after EMA assessment ,number of minutes
+av120b,average activity for minutes measured for the two hours before EMA assessment ,activity counts
+av120a,average activity for minutes measured for the two hours after EMA assessment ,activity counts
+MinMeas1,number of minutes measured in the hour before the first EMA assessment ,number of minutes
+Activ1,total activity for the hour before the first EMA assessment ,activity counts
+MinMeas2,number of minutes measured in the full interval between the first and second EMA assessment ,number of minutes
+Activ2,total activity for the full interval between the first and second EMA assessment ,activity counts
+MinMeas3,number of minutes measured in the full interval between the second and third EMA assessment ,number of minutes
+Activ3,total activity for the full interval between the second and third EMA assessment ,activity counts
+MinMeas4,number of minutes measured in the full interval between the third and fourth EMA assessment ,number of minutes
+Activ4,total activity for the full interval between the third and fourth EMA assessment ,activity counts
+MinMeas5,number of minutes measured in the hour after the fourth EMA assessment ,number of minutes
+Activ5,total activity for the hour after the fourth EMA assessment ,activity counts
+tactMin,total number of minutes for all intervals plus one hour before and after ,number of minutes
+tactiv,total activity for all intervals plus one hour before and after ,activity counts
+tpermin,total average activity per minute for all intervals plus one hour before and after ,activity counts
+threintm,total number of minutes for the three intervals only ,number of minutes
+threina,total number activity for the three intervals only ,activity counts
+threavpm,total average activity per minute for the three intervals only ,activity counts
+timebd,total time in hours spent in bed ,number of hours
+mealhrs,total hours since last eating episode ,number of hours
+headdur,total time in hours headache lasted ,number of hours
+timeofday,time of assessment,"""Morning"", ""Noon"", ""Afternoon"", or ""Evening"""
+timepoint,time of assessment numeric index,"1, 2, 3, or 4"
+timeindex,numeric index of assessment over two weeks,number 1-56

@@ -1,0 +1,244 @@
+names,question,response
+fam,Family ID,"If greater than 50,000 the participant is general population sample"
+id,Individual ID,"A number, either 1, 55, 56, 70, 71, 72, 73, or 74"
+followup,NA,NA
+participant,NA,A number from 0-7
+age,Age of the participant ,From 11 years old to 71 years old
+sex,Gender of the participant,"0=male, 1=female"
+subjectid,Concatenated participant ID,"A character string in the form of  ""fam.id.followup.participant"""
+dateEMA,System day variable,NA
+Day_of_Week,Day of the week,A number from 1-7
+weekday,Dummy variable for weekday,"1 = yes, 0 = no "
+weekend,Dummy variable for weekend,"1 = yes, 0 = no "
+studyDay,Custom day of week variable ,"A number from 0-6, 0 is the weekday the study started"
+daySignal,Assessment index on a certain day,From 1 to 4
+time,Timestamp,NA
+flags,Indicator of whether participant reponded to cue for survey,"Processed=answered, Unprocessed=invalid timepoint, Missed=participant missed cue"
+VAR_timePlan,Timeplan the subject selected,"Number 1-12, Letter A-D"
+VAR_gender,Gender of subject,"m = male, f = female"
+morning_instructions,NA,NA
+morning_bedtime,About what time did you go to bed last night (regardless of the time you actually fell asleep)?,"Time in 30 min interval, represented as a number 0 (12:00am-12:30am) to 23.5 (11:30pm-12:00am) "
+morning_sleep_quantity,About how many hours did you actually sleep? ,Number of hours 0-14 in 0.5 increments
+morning_sleep_quality,How rested did you feel upon awakening?,Likert Scale 1-7
+morning_sleep_problems_falling,Which (if any) of the following sleep problems did you have last night? {Difficulty falling asleep},"1 = yes, 0 = no "
+morning_sleep_problems_awake_ni,Which (if any) of the following sleep problems did you have last night? {Awakening during the night},"1 = yes, 0 = no "
+morning_sleep_problems_awake_ea,Which (if any) of the following sleep problems did you have last night? {Awakening too early},"1 = yes, 0 = no "
+morning_sleep_problems_feeling,Which (if any) of the following sleep problems did you have last night? {feeling-unrestored},"1 = yes, 0 = no "
+morning_sleep_problems_nightmar,Which (if any) of the following sleep problems did you have last night? {nightmares},"1 = yes, 0 = no "
+morning_sleep_problems_other,Which (if any) of the following sleep problems did you have last night? {other sleep problem},"1 = yes, 0 = no "
+morning_sleeping_pills,Did you take any sleeping pills last night?,"1 = yes, 0 = no "
+now_instructions,NA,NA
+now_where,Where are you right now? ,Character string responses for each location
+now_company_alone,Who is with you at this moment? {alone},"1 = yes, 0 = no "
+now_company_family,Who is with you at this moment? {family},"1 = yes, 0 = no "
+now_company_friends,Who is with you at this moment {friends},"1 = yes, 0 = no "
+now_company_colleagues,Who is with you at this moment {Colleagues of classmates},"1 = yes, 0 = no "
+now_company_strangers,Who is with you at this moment {strangers},"1 = yes, 0 = no "
+now_company_pet,"Who is with you at this moment {A pet (dog, cat)}","1 = yes, 0 = no "
+now_company_other,Who is with you at this moment {Other},"1 = yes, 0 = no "
+now_activity_nothing,What are you doing at this moment? {Nothing or waiting},"1 = yes, 0 = no "
+now_activity_resting,What are you doing at this moment? {Napping/Resting},"1 = yes, 0 = no "
+now_activity_eating,What are you doing at this moment? {Eating},"1 = yes, 0 = no "
+now_activity_household,What are you doing at this moment? {Household chores},"1 = yes, 0 = no "
+now_activity_working,What are you doing at this moment? {Working (paid or volunteer)},"1 = yes, 0 = no "
+now_activity_shopping,What are you doing at this moment? {Shopping},"1 = yes, 0 = no "
+now_activity_hygiene,What are you doing at this moment? {Personal hygiene care},"1 = yes, 0 = no "
+now_activity_sports,What are you doing at this moment? {Physical leisure or sports},"1 = yes, 0 = no "
+now_activity_exercise,What are you doing at this moment? {Personal exercise},"1 = yes, 0 = no "
+now_activity_walking_dog,What are you doing at this moment? {Walking the dog},"1 = yes, 0 = no "
+now_activity_traveling,What are you doing at this moment? {Traveling or commuting},"1 = yes, 0 = no "
+now_activity_tv,What are you doing at this moment? {Watching TV},"1 = yes, 0 = no "
+now_activity_music,What are you doing at this moment? {Listening to music},"1 = yes, 0 = no "
+now_activity_computer,What are you doing at this moment? {Using a computer/electronic device},"1 = yes, 0 = no "
+now_activity_talking_phone,What are you doing at this moment? {Talking on the phone},"1 = yes, 0 = no "
+now_activity_talking_real,What are you doing at this moment? {Talking in-person},"1 = yes, 0 = no "
+now_activity_other_nonphysical,What are you doing at this moment? {Other nonphysical leisure},"1 = yes, 0 = no "
+now_activity_other,What are you doing at this moment? {Other activity},"1 = yes, 0 = no "
+now_sadness,How happy versus sad do you feel right now?,"Likert Scale 1-7, 1=Very cheerful/happy, 7=Very sad/depressed/unhappy"
+now_anxiousness,How relaxed vs. anxious do you feel right now?,"Likert Scale 1-7, 1=Very Relaxed/Calm, 7=Very Anxious/Nervous"
+now_active,How inactive vs active do you feel right now?,"Likert Scale 1-7, 1=Very Inactive/Quiet, 7=Very Active/Aroused"
+now_excited,How tired vs enegetic do you feel right now?,"Likert Scale 1-7, 1=Very Tired/Sluggish, 7=Very Lively/Excited"
+now_distracted,How well can you concentrate or focus right now?,"Likert Scale 1-7, 1=Very focused/attentive, 7=Very unfocused/distracted"
+now_irritable,How irritable or easily angered do you feel right now?,"Likert Scale 1-7, 1=Not at all Irritable/Angry, 7=Very Irritable/Angry"
+now_slow_thinking,How quick is your thinking?,"Likert Scale 1-7, 1=Very quick, lots of ideas, 7=Slow, cannot think of things"
+now_enjoyment,How much are you able to enjoy and feel pleasure in things?,"Likert Scale 1-7, 1=Really enjoying things, 7=No pleasure or enjoyment"
+now_restless,How fidgety or restless do you feel right now compared to your usual self?,"Likert Scale 1-7, 1=Not at all restless, 7=Very restless, fidgety, cannot sit still"
+now_hungry,How hungry do you feel right now?,"Likert Scale 1-7, 1=Not at all hungry, 7=Extremely hungry"
+since_instructions,NA,NA
+since_rest,"Since the last assesment, did you have a nap or rest?","1 = yes, 0 = no "
+since_rest_duration,How long was your nap or rest?,"15=""Less than 30 min"", 45=""30-60 min"", 90=""60-120 min"", 120=""Longer than 120 min"""
+since_rest_fell_asleep,Did you actually fall asleep during the nap rest? ,"1 = yes, 0 = no "
+since_physical_activity_vigorou,"Please select the intensity level of activites you did since the last questionnaire. {Vigorous activites (e.g. running, fast cycling, heavy lifting or digging)} ","1 = yes, 0 = no "
+since_physical_activity_moderat,"Please select the intensity level of activites you did since the last questionnaire. {Moderate activites (e.g. tennis, bicycling, carrying light loads)} ","1 = yes, 0 = no "
+since_physical_activity_light,"Please select the intensity level of activites you did since the last questionnaire. {Light activites (e.g. walking, climbing stairs, routine household chores)} ","1 = yes, 0 = no "
+since_vigorous_activity,"Since the last questionnaire, how many minutes did you do vigorous activities including intensive sports or exercise (such as running or fast cycling) or intensive physical work (such as heavy lifting or digging)?","Number of minutes from 5-60, with 5=""About minutes or less"" and 60=""More than 1 hour"""
+since_vigorous_activity_planned,Was this vigorous activity (or acitivities) part of a planned workout or exercise routine?,"1 = yes, 0 = no "
+since_moderate_activity,"Since the last questionnaire, how many minutes did you do moderate acitives (activities that make you breathe somewhat harder than usual such as playing tennis, bicycling, carrying light loads)?","Number of minutes from 5-60, with 5=""About minutes or less"" and 60=""More than 1 hour"""
+since_moderate_activity_planned,Was this moderate activity (or acitivities) part of a planned workout or exercise routine?,"1 = yes, 0 = no "
+since_light_activity,"Since the last questionnaire, how many minutes did you do light activities (activities that may not make you breathe somewhat harder than usual such as walking, climbing stairs, routine household chores, etc.)?","Number of minutes from 5-60, with 5=""About minutes or less"" and 60=""More than 1 hour"""
+since_light_activity_planned,Was this light activity (or acitivities) part of a planned workout or exercise routine?,"1 = yes, 0 = no "
+since_had_drink_water,"Since the last questionnaire, did you drink: {Water}","1 = yes, 0 = no "
+since_had_drink_coffee,What type of caffeinated beverage did you consume? {Coffee},"1 = yes, 0 = no "
+since_had_drink_alcohol,"Since the last questionnaire, did you drink: {An alcoholic beverage (wine, beer, liquor)}","1 = yes, 0 = no "
+since_had_drink_other,"Since the last questionnaire, did you drink: {Another type of drink}","1 = yes, 0 = no "
+since_had_drink_alcohoc_quantit,How many glasses or cups of alcoholic drinks did you consume? ,"Number of glasses, 1-5, 5=""5 glasses or more"""
+since_eaten_quantity,"For these different times when you ate, think about when you ate the most when answering the following questions: How much did you eat?","Number from 1-4, 1=""Just a snack"", 2=""A small meal"", 3=""A regular, full meal"", 4=""A large meal"""
+since_substances_cigarettes,"Since the last questionnaire, have you used any of these substances? {Cigarettes}","1 = yes, 0 = no "
+since_substances_cannabis,"Since the last questionnaire, have you used any of these substances? {Cannabis, pot}","1 = yes, 0 = no "
+since_substances_other,"Since the last questionnaire, have you used any of these substances? {Other drug}","1 = yes, 0 = no "
+since_substances_cigarettes_no,How many cigarettes did you have?,"1-5, 8=""6-10"", 15=""10-20"", 20=""Over 20"""
+since_substances_cannabis_no,How many joints did you have?,"1-4, 5=""Over 5"""
+since_substances_other_cocaine,Which drug did you use? {Cocaine},"1 = yes, 0 = no "
+since_substances_other_tranquil,Which drug did you use? {Tranquilizers},"1 = yes, 0 = no "
+since_substances_other_stimulan,Which drug did you use? {Stimulants},"1 = yes, 0 = no "
+since_substances_other_painkill,Which drug did you use? {Painkillers},"1 = yes, 0 = no "
+since_substances_other_heroin,Which drug did you use? {Heroin},"1 = yes, 0 = no "
+since_substances_other_other,Which drug did you use? {Other drug},"1 = yes, 0 = no "
+event_instructions,NA,NA
+event_category,"The following questions concern the ONE event or experience, good or bad, that has affected you the most since the last questionnaire. Which of the following categories best describes the area of your life in which the event occurred?",Character string responses for each category
+event_negative_impact,To what degree did this event have a postive or negtive impact on you?,"Likert Scale 1-7, 1=Extremely positive, 7=Extremely negative"
+day_instructions,NA,NA
+day_physical_health,How was your physical health today?,"Likert Scale 1-7, 1=Very poor, 7=Very good, excellent"
+day_problems_categories_allergi,Did you have any of the following problems today? {Allergies},"1 = yes, 0 = no "
+day_problems_categories_breath,Did you have any of the following problems today? {Asthma or breathing difficulties},"1 = yes, 0 = no "
+day_problems_categories_belly,"Did you have any of the following problems today? {Gastro-intestinal, bowel or stomach problems}","1 = yes, 0 = no "
+day_problems_categories_muscle,Did you have any of the following problems today? {Muscle/joint pain},"1 = yes, 0 = no "
+day_problems_categories_heart,Did you have any of the following problems today? {Heart racing or pounding},"1 = yes, 0 = no "
+day_problems_categories_headach,Did you have any of the following problems today? {Headache pain or migraine},"1 = yes, 0 = no "
+day_problems_categories_dizzy,"Did you have any of the following problems today? {Dizziness, feeling light-headed or faint}","1 = yes, 0 = no "
+day_problems_categories_hurthea,Did you have any of the following problems today? {Hit or hurt your head},"1 = yes, 0 = no "
+day_problems_allergies,How much did your allergies bother you today?,"1=""Not at all"", 2=""Mild"", 3=""Moderate"", 4=""Severe"""
+day_problems_breath,How much did your asthma or breathing difficulties bother you today?,"1=""Not at all"", 2=""Mild"", 3=""Moderate"", 4=""Severe"""
+day_problems_belly_symptoms_abd,Which (if any) of the following gastro-intestinal/stomach symptoms did you have today? {Pain in your abdomen},"1 = yes, 0 = no "
+day_problems_belly_symptoms_dia,Which (if any) of the following gastro-intestinal/stomach symptoms did you have today? {Diarrhea},"1 = yes, 0 = no "
+day_problems_belly_symptoms_nau,Which (if any) of the following gastro-intestinal/stomach symptoms did you have today? {Nausea},"1 = yes, 0 = no "
+day_problems_belly_symptoms_vom,Which (if any) of the following gastro-intestinal/stomach symptoms did you have today? {Vomiting},"1 = yes, 0 = no "
+day_problems_belly,How much did this (or these) gastro-intestinal/stomach symptoms(s) bother you today?,"1=""Not at all"", 2=""Mild"", 3=""Moderate"", 4=""Severe"""
+day_problems_muscle,How much did your muscle/joint pain bother you today?,"1=""Not at all"", 2=""Mild"", 3=""Moderate"", 4=""Severe"""
+day_problems_heart,How much did your heart racing or pounding bother you today?,"1=""Not at all"", 2=""Mild"", 3=""Moderate"", 4=""Severe"""
+diziness_instructions,NA,NA
+dizziness_situation,"Please tell us more about feeling dizzy or light headed. Did these feelings occur in a particular situation (in a bus, in hot weather, or other condition)?","1 = yes, 0 = no "
+dizziness_faint,Did you actually faint today?,"1 = yes, 0 = no "
+day_over_medication,Did you take any over the counter medications today?,"1 = yes, 0 = no "
+day_over_medication_why_pain,"Did you take them for? {Pain (headache, muscle or join pain, etc)}","1 = yes, 0 = no "
+day_over_medication_why_allergi,Did you take them for? {Allergies/cold},"1 = yes, 0 = no "
+day_over_medication_why_fever,"Did you take them for? {Fever, acute illness}","1 = yes, 0 = no "
+day_over_medication_why_other,Did you take them for? {Other},"1 = yes, 0 = no "
+day_prescribed_medication,Did you take prescribed medications today?,"1 = yes, 0 = no "
+day_prescribed_medication_birth,Which of the following conditions? {Birth control},"1 = yes, 0 = no "
+day_prescribed_medication_heart,Which of the following conditions? {Heart/blood pressure/cholesterol},"1 = yes, 0 = no "
+day_prescribed_medication_meta,"Which of the following conditions? {Thyroid, metabolic}","1 = yes, 0 = no "
+day_prescribed_medication_sleep,Which of the following conditions? {Sleep},"1 = yes, 0 = no "
+day_prescribed_medication_anx,Which of the following conditions? {Anxiety or depression},"1 = yes, 0 = no "
+day_prescribed_medication_atten,Which of the following conditions? {Attention/hyperactivity},"1 = yes, 0 = no "
+day_prescribed_medication_aller,"Which of the following conditions? {Asthma, allergies, breathing problems}","1 = yes, 0 = no "
+day_prescribed_medication_joint,"Which of the following conditions? {Arthritis, joint or back pain}","1 = yes, 0 = no "
+day_prescribed_medication_other,Which of the following conditions? {Other},"1 = yes, 0 = no "
+day_lethargic,"Did you feel like you had no physical energy, as if you were weighted down or had a heavy feeling in your arms and legs for most of the day?","1 = yes, 0 = no "
+day_period,Are you currently having your period?,"1 = yes, 0 = no "
+now_pain,Are you in pain right now (other than headache pain)?,"Likert Scale 1-7, 1=No pain, 7=Extreme pain"
+ema,Participation to EMA,"1 = yes, 0 = no "
+FULST_AGOPU2,NA,NA
+FULST_GADPU2,NA,NA
+FULST_PA4PU2,NA,NA
+FULST_DYSPU2,NA,NA
+FULST_MAEPU2,NA,NA
+FULST_HMEPU2,NA,NA
+FULST_BRP2,NA,NA
+FULST_SZA2,NA,NA
+FULST_SZD2,NA,NA
+FULST_SADPU2,NA,NA
+FULST_SAMPU2,NA,NA
+FULST_MDDPD2,NA,NA
+FULST_BP1PU2,NA,NA
+FULST_BP2PU2,NA,NA
+FULST_ALCAB2,NA,NA
+FULST_ALCDP2,NA,NA
+FULST_BIPPU2,NA,NA
+FULST_DRUDP2,NA,NA
+FULST_DRUAB2,NA,NA
+FULST_ALCAD2,NA,NA
+FULST_DRUAD2,NA,NA
+FULST_SOCPU2,NA,NA
+FULST_ADAPU2,NA,NA
+fulst_MAEPS,NA,NA
+fulst_MDEPS,NA,NA
+fulst_MMAPS,NA,NA
+fulst_RBMPS,NA,NA
+fulst_BMAPS,NA,NA
+pr_mood_psychotic,NA,NA
+pr_mood,NA,NA
+pr_GRPPDDP9,NA,NA
+mood_psychotic,NA,NA
+mood,NA,NA
+education4,NA,NA
+antidep_cum,NA,NA
+antipsy_cum,NA,NA
+antiman_cum,NA,NA
+tranq_cum,NA,NA
+GAF_C,NA,NA
+AGOPU2,NA,NA
+GADPU2,NA,NA
+PA4PU2,NA,NA
+DYSPU2,NA,NA
+MAEPU2,NA,NA
+HMEPU2,NA,NA
+BRP2,NA,NA
+SZA2,NA,NA
+SZD2,NA,NA
+SADPU2,NA,NA
+SAMPU2,NA,NA
+ALCAB2,NA,NA
+ALCDP2,NA,NA
+BP1PU2,NA,NA
+BP2PU2,NA,NA
+BIPPU2,NA,NA
+MDDPD2,NA,NA
+DRUDP2,NA,NA
+DRUAB2,NA,NA
+ALCAD2,NA,NA
+DRUAD2,NA,NA
+SOCPU2,NA,NA
+ADAPU2,NA,NA
+fup_mood_psychotic,NA,NA
+fup_mood,NA,NA
+stimu,NA,NA
+antipsy,NA,NA
+tranq,NA,NA
+antidep,NA,NA
+antiman,NA,NA
+ksads_medic,NA,NA
+base_medic,NA,NA
+fup_medic,NA,NA
+Height,NA,NA
+Weight,NA,NA
+FULST_MDEPU2,NA,NA
+FULST_HME2,NA,NA
+PSYDU_c,NA,NA
+MANPUDEPPUDU_c,NA,NA
+Szaok,NA,NA
+onset,NA,NA
+fulst_sampuon,NA,NA
+fulst_sadpuon,NA,NA
+fulst_szaon,NA,NA
+fulst_szdon,NA,NA
+fulst_brpon,NA,NA
+fulst_bp1puon,NA,NA
+fulst_bp2puon,NA,NA
+fulst_mddpdon,NA,NA
+fulst_hmeon,NA,NA
+offset,NA,NA
+fulst_sampuof,NA,NA
+fulst_sadpuof,NA,NA
+fulst_szaof,NA,NA
+fulst_szdof,NA,NA
+fulst_brpof,NA,NA
+fulst_bp1puof,NA,NA
+fulst_bp2puof,NA,NA
+fulst_mddpdof,NA,NA
+fulst_hmeof,NA,NA
+Medication,NA,NA
+studyid,NA,NA
+timeofday,time of assessment,"""Morning"", ""Noon"", ""Afternoon"", or ""Evening"""
+timepoint,time of assessment numeric index,"1, 2, 3, or 4"
+timeindex,numeric index of assessment over two weeks,number 1-28

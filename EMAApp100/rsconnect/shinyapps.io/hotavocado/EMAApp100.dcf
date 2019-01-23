@@ -1,0 +1,12 @@
+name: EMAApp100
+title: EMAApp100
+username:
+account: hotavocado
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 302165
+bundleId: 1663862
+url: https://hotavocado.shinyapps.io/EMAApp100/
+when: 1540521834.5238
+asMultiple: FALSE
+asStatic: FALSE

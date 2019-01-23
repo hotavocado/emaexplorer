@@ -1,0 +1,12 @@
+name: EMAApp100_unstable
+title: EMAApp100_unstable
+username:
+account: hotavocado
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 615494
+bundleId: 1759409
+url: https://hotavocado.shinyapps.io/EMAApp100_unstable/
+when: 1544649783.21403
+asMultiple: FALSE
+asStatic: FALSE
