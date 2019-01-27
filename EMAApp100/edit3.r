@@ -67,12 +67,12 @@ heatdataR <- reactive({withProgress(message = 'Loading Data for Heatmap 2', valu
 
 
 ##Code for main heatmap
-output$freqheat_dR <- renderPlotly({
+output$heatmapR <- renderPlotly({
   
   if(input$heatselectR %in% c("None", "Response")) {
     
     ggplotly(ggplot(heatdata_dR()) + 
-               geom_tile(aes_string(y=names(heatdata_dR())[1], x=factor("All"), fill=names(heatdata_dR())[2])) +
+               geom_tile(aes_string(y=input$heatmapvar, x=factor("All"), fill=names(heatdata_dR())[2])) +
                labs(y="", x="", title=names(heatdata_dR())[2], fill="") +
                scale_fill_distiller(palette = "RdYlGn", direction = 1) +
                scale_y_discrete(limits=eval(parse(text=paste0("heatdata_dR()$", names(heatdata_dR())[1])))) +
@@ -114,7 +114,7 @@ output$freqheat_dR <- renderPlotly({
 
 
 ##Code for timeofday/weekday heatmap
-output$freqheatR <- renderPlotly({
+output$heatmapTODR <- renderPlotly({
   
   if (input$heatselectR %in% c("None", "Response")) {  
     

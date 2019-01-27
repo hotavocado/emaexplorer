@@ -79,8 +79,6 @@ observeEvent(input$rheatmap1, ignoreInit = T, {
           rename_at(vars(input$rheatmaporder), ~ paste0(input$rheatmaporder, "_s"))
       
     }
-  }
-  
 })
 
 #Random plot
@@ -198,7 +196,7 @@ output$rheatmap_instr <-  renderText(
 
 
 ##Main boxplot code
-output$boxplot_dR <- renderPlotly({
+output$heatmapR <- renderPlotly({
   
   input$rheatmap1
   
@@ -208,79 +206,54 @@ output$boxplot_dR <- renderPlotly({
     
     else {
       
-      if (varcolor2.3$l  %in% "None_s") {
-        
-        ggplotly(ggplot(data=rheatmapdata$l, aes_string(x=factor(0),
-                                                        y=input$rheatmapvar,
-                                                        label="ID"))+ 
-                   geom_boxplot(size=.5, fatten=1)+
-                   geom_jitter(alpha=0.2, size=1.2, shape=19, position = position_jitter(w = 0.5, h = 0.1))+
-                   stat_summary(fun.data = mean_cl_normal, geom="pointrange", size=2, alpha=.8, 
-                                position=position_dodge(width=0.75), shape=4, color="firebrick")+
-                   labs(y=NULL, x=NULL, title=input$rheatmapvar)+
-                   theme_bw()+
-                   theme(axis.title.x=element_blank(), axis.title.y=element_text(size=8), 
-                         axis.text.x = element_text(size=8, vjust = 1, color="gray65"), 
-                         axis.text.y = element_blank(),
-                         axis.line = element_line(color="gray65", size=0.5),
-                         axis.ticks.y = element_blank(),
-                         axis.ticks.x = element_line(colour = "gray"),
-                         panel.grid.major = element_blank(), 
-                         panel.grid.minor = element_blank(), 
-                         panel.background = element_blank(),
-                         panel.border = element_blank(),
-                         #plot.margin = unit( c(0,3,3,0) , "in"),
-                         aspect.ratio = 0.3) +
-                   #legend.position="none")+
-                   coord_flip()
-                 #coord_flip(ylim=c(0, max(boxdata_dR()[4])), expand = c(0.1,0))+
-                 #scale_y_continuous(breaks=seq(0, max(boxdata_dR()[2]), by = 4))
-        )
-      }
-      
-      else {  
-        
-        ggplotly(ggplot(data=rheatmapdata$l, aes_string(x=varcolor2.3$l ,
-                                                        y=input$rheatmapvar,
-                                                        label="ID", color=varcolor2.3$l))+ 
-                   geom_boxplot(size=.5, fatten=1)+
-                   geom_jitter(alpha=0.2, size=1.2, shape=19, position = position_jitter(w = 0.5, h = 0.1))+
-                   stat_summary(fun.data = mean_cl_normal, geom="pointrange", size=2, alpha=.8, 
-                                position=position_dodge(width=0.75), shape=4, color="firebrick")+
-                   #stat_summary(fun.data = give.n, geom = "text", color="firebrick", size=4) +
-                   labs(y=NULL, x=NULL, title=input$rheatmapvar)+
-                   theme_bw()+
-                   theme(axis.title.x=element_blank(), axis.title.y=element_text(size=8), 
-                         axis.text.x = element_text(size=8, vjust = 1, color="gray65"), 
-                         axis.text.y = element_text(size=10),
-                         axis.line = element_line(color="gray65", size=0.5),
-                         axis.ticks.y = element_blank(),
-                         axis.ticks.x = element_line(colour = "gray"),
-                         panel.grid.major = element_blank(), 
-                         panel.grid.minor = element_blank(), 
-                         panel.background = element_blank(),
-                         panel.border = element_blank(),
-                         plot.margin = unit( c(0.5,0.5,0.5,1) , "cm"),
-                         aspect.ratio = 0.3)+
-                   #legend.position="none")+
-                   coord_flip()
-                 #coord_flip(ylim=c(0, max(boxdata_dR()[4])), expand = c(0.1,0))+
-                 #scale_y_continuous(breaks=seq(0, max(boxdata_dR()[2]), by = 4))
-        )
-        
-        
-      }
+      if (varorder2.3$l  %in% c("ID_s", "None_s", "Response_s")) {
+            
+            ggplotly(ggplot(rheatmapdata$l) + 
+                       geom_tile(aes_string(y="ID", x=factor("All"), fill=input$heatmapvar)) +
+                       labs(y="", x="", title=input$heatmapvar, fill="") +
+                       scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                       scale_y_discrete(limits=eval(parse(text=paste0("rheatmapdata$l$ID")))) +
+                       theme_bw() +
+                       theme(plot.margin = margin(t = 30, b = 10),
+                             axis.text.y = element_blank(),
+                             axis.ticks.x = element_blank(),
+                             axis.ticks.y = element_blank(),
+                             axis.title.y = element_blank(),
+                             legend.title = element_blank(),
+                             panel.border = element_blank(),
+                             panel.background = element_blank(),
+                             panel.grid = element_blank())
+            )
+          }
+          
+          else {
+            
+            ggplotly(ggplot(rheatmapdata$l, aes_string(label=varorder2.3)) + 
+                       geom_tile(aes_string(y="ID", x=factor("All"), fill=input$heatmapvar)) +
+                       labs(y="", x="", title=input$heatmapvar, fill="") +
+                       scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                       scale_y_discrete(limits=eval(parse(text=paste0("rheatmapdata$l$ID")))) +
+                       theme_bw() +
+                       theme(plot.margin = margin(t = 30, b = 10),
+                             axis.text.y = element_blank(),
+                             axis.ticks.x = element_blank(),
+                             axis.ticks.y = element_blank(),
+                             axis.title.y = element_blank(),
+                             legend.title = element_blank(),
+                             panel.border = element_blank(),
+                             panel.background = element_blank(),
+                             panel.grid = element_blank())
+                     
+            )
+          } 
     }
-    
   )
-  
 })
+        
+        
+##Code for timeofday/weekday heatmap
+output$heatmapTODR <- renderPlotly({
 
-
-##Timeofday boxplot code
-
-output$boxplotR <- renderPlotly({
-  
   input$rheatmap1
   
   isolate(
@@ -289,35 +262,48 @@ output$boxplotR <- renderPlotly({
     
     else {
       
-      ggplotly(ggplot(data=rheatmapdata$m, aes_string(x="timeofday", 
-                                                      y=input$rheatmapvar, 
-                                                      color="timeofday", label="ID"))+
-                 geom_boxplot(size=.5, fatten=1)+
-                 geom_jitter(alpha=0.2, size=1.2, shape=19, position = position_jitter(w = 0.5, h = 0.1))+
-                 stat_summary(fun.data = mean_cl_normal, geom="pointrange", size=2, alpha=.8, 
-                              position=position_dodge(width=0.75), shape=4, color="firebrick")+
-                 labs(y=NULL, x=NULL, title="")+
-                 scale_x_discrete(limits = rev(levels(rheatmapdata$m[["timeofday"]])))+
-                 theme_bw()+
-                 theme(axis.title.x=element_blank(), axis.title.y=element_text(size=8), 
-                       axis.text.x = element_text(size=8, vjust = 1, color="gray65"), 
-                       axis.text.y = element_text(size=10),
-                       axis.line = element_line(color="gray65", size=0.5),
-                       axis.ticks.y = element_blank(),
-                       axis.ticks.x = element_line(colour = "gray"),
-                       panel.grid.major = element_blank(), 
-                       panel.grid.minor = element_blank(), 
-                       panel.background = element_blank(),
-                       panel.border = element_blank(),
-                       #plot.margin = unit( c(0,3,3,0) , "in"),
-                       aspect.ratio = 0.2,
-                       legend.position="none") +
-                 coord_flip()
-               # scale_y_continuous(breaks=c(0:max(boxdataR()[3])))
-      )
-      
-    }
+      if (varorder2.3$l  %in% c("ID_s, None_s", "Response_s")) {
     
+        gplotly(ggplot(rheatmapdata$m) + 
+                       geom_tile(aes_string(x=input$heatstratR, y="ID", fill=input$heatmapvar)) +
+                       labs(x="", y="Subject ID", title=paste0(input$heatmapvar, " ", input$heatstratR), fill="") +
+                       scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                       scale_x_discrete(limits = levels(eval(parse(text=paste0("rheatmapdata$m$", input$heatstratR))))) +
+                       scale_y_discrete(limits=eval(parse(text=paste0("rheatmapdata$m$ID")))) +
+                       theme_bw() +
+                       theme(plot.margin = margin(t = 30, b = 10),
+                             axis.text.y = element_blank(),
+                             axis.ticks.x = element_blank(),
+                             axis.ticks.y = element_blank(),
+                             axis.title.y = element_blank(),
+                             legend.title = element_blank(),
+                             panel.border = element_blank(),
+                             panel.background = element_blank(),
+                             panel.grid = element_blank())
+                     
+            ) 
+          }
+          
+          else {
+            
+            ggplotly(ggplot(heatdataR(), aes_string(label=input$heatorder)) + 
+                       geom_tile(aes_string(x=input$heatstratR, y="ID", fill=input$heatmapvar)) +
+                       labs(x="", y="Subject ID", title=paste0(input$heatmapvar, " ", input$heatstratR), fill="") +
+                       scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                       scale_x_discrete(limits = levels(eval(parse(text=paste0("rheatmapdata$m$", input$heatstratR))))) +
+                       scale_y_discrete(limits=eval(parse(text=paste0("rheatmapdata$m$ID")))) +
+                       theme_bw() +
+                       theme(plot.margin = margin(t = 30, b = 10),
+                             axis.text.y = element_blank(),
+                             axis.ticks.x = element_blank(),
+                             axis.ticks.y = element_blank(),
+                             axis.title.y = element_blank(),
+                             legend.title = element_blank(),
+                             panel.border = element_blank(),
+                             panel.background = element_blank(),
+                             panel.grid = element_blank())
+          )
+          }
+    }
   )
-  
 })

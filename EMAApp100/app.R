@@ -275,19 +275,42 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                          
                                          conditionalPanel(condition = "input.conditionedPanels2 == 'Response Heatmap'",
                                                           
-                                                          h4("Heatmap Options:"),
-                
-                                                          uiOutput("heatselectR"),
+                                                          h4('Main Variable Options'),
                                                           
-                                                          selectInput("heatstratR", 
+                                                          uiOutput("rheatmapvar"),
+                                                          
+                                                          hr(),
+                
+                                                          h4('Ordering Variable Options'), 
+                                                          
+                                                          uiOutput("rheatmaporder"),
+                                                          
+                                                          hr(),
+                                                          
+                                                          h4('Plot 2 Options'),
+                                                          
+                                                          selectInput("rheatmapraw", 
+                                                                      label = "Data Type:", 
+                                                                      choices = c("raw", "subject normalized"),
+                                                                      selected = "raw"),
+                                                          
+                                                          selectInput("rheatmapstrat", 
                                                                       label = "Stratify By:", 
                                                                       choices = c("timeofday", "weekday"),
                                                                       selected = "timeofday"),
                                                           
-                                                          selectInput("heatdata", 
-                                                                      label = "Plot 2 Data Type:", 
-                                                                      choices = c("raw", "subject normalized"),
-                                                                      selected = "raw")
+                                                          hr(),
+                                                          
+                                                          h4('Random Variable Options'),
+                                                          
+                                                          checkboxGroupInput("rheatmaprand_choice", label = "Choose Random Inputs:", choices = c("Main Var.", "Order Var."), selected = c("Main Var.", "Order Var."),
+                                                                             inline = T, width = 300), 
+                                                          actionButton("rheatmaprandom", "Random Vars"),
+                                                          
+                                                          hr(),
+                                                          
+                                                          actionButton("rheatmap1", "Create/Update Plot")
+                                                      
                                                           
                                          ),
                                          
@@ -395,12 +418,15 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                      
                                                      column(1),
                                                      
-                                                     
+                                                     column(8,
+                                                            div(style = "height:10px"),
+                                                            verbatimTextOutput("rheatmap_instr")),
+                                                  
                                                      column(2,
-                                                            plotlyOutput("freqheat_dR", height = 600)),
+                                                            plotlyOutput("heatmapR", height = 600)),
                                                      
                                                      column(6,
-                                                            plotlyOutput("freqheatR", height = 600))
+                                                            plotlyOutput("heatmapTODR", height = 600))
                                                      
                                                     #column(4,
                                                             #h6("Survey Question/Variable Description:"),
@@ -1847,10 +1873,17 @@ server <- function(input, output){
 
   
   #Random plot
-  
+
   #make plot update after new variables are selected
   
   rboxplotvariables <- reactiveValues(var = "ID", color = "None")
+  
+  #Default boxplot variable
+  observeEvent(input$go, priority = -1, {
+    
+    rboxplotvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+  })
   
   rboxplotrandbutton <- reactiveValues(r1=NULL, r2=NULL)
   
@@ -1929,7 +1962,7 @@ server <- function(input, output){
       
       else {
         
-        if (varcolor2.2$l  %in% "None_s") {
+        if (varcolor2.2$l  %in% "None") {
           
           ggplotly(ggplot(data=rboxplotdata$l, aes_string(x=factor(0),
                                                           y=input$rboxplotvar,
@@ -2045,7 +2078,6 @@ server <- function(input, output){
  
   #Responses Page 3, heatmap of responses-----------------------------------------------------------------------------------------------------
   
-  
   ##datatable for heatmaps
   output$table5 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
                                        options = list(columnDefs = list(list(
@@ -2058,183 +2090,320 @@ server <- function(input, output){
                                        ))), callback = JS('table.page(3).draw(false);'))
   
   
-  observeEvent(input$table5_rows_selected, {
-    stratify_vars$df2 <- stratify_vars$df %>% select(-c(names(dataset())[[input$table5_rows_selected]]))
+  #Select main variable
+  output$rheatmapvar <- renderUI({selectInput('rheatmapvar', 'Main Variable:', c(names(dataset())), selected = rheatmapvariables$var, selectize=TRUE)})
+  
+  
+  
+  #Select ordering variable
+  output$rheatmaporder <- renderUI({selectInput('rheatmaporder', 'Order By:', c("None", "Response", varnames2.3$df), selected = rheatmapvariables$order, selectize=TRUE)})
+  
+  
+  #heatmap order variable
+  varorder2.3 <- reactiveValues(l="ID")
+  
+  observeEvent(input$rheatmap1, {if (input$rheatmaporder %in% c("ID", "None", "Response")) {varorder2.3$l <- input$rheatmaporder}
+    else {varorder2.3$l <- paste0(input$rheatmaporder, "_s")} 
   })
   
   
-  
-  ##Stratify select for main heatmap
-  observeEvent(input$table5_rows_selected, {
-    varnames$l <- names(stratify_vars$df2)[1:ncol(stratify_vars$df2)]
-  })
-  
-  output$heatselectR <- renderUI({selectInput('heatselectR', 'Order subjects by:', c("None", "Compliance", varnames$l), selectize=TRUE)})
+  ##Use varnames so updating stratify_vars3.1$df2 doesn't refresh subbrowseorder
+  varnames2.3 <- reactiveValues(df=NULL)
   
   
-  ##Data for main heatmap
-  heatdata_dR <- reactive({withProgress(message = 'Loading Data for Heatmap 1', value = 0, {
+  ##order datasets
+  stratify_vars2.3 <- reactiveValues(df = NULL, df2 = NULL)
+  
+  ##Default datasets
+  observeEvent(input$go, priority = -1, {
     
-    if (input$heatselectR %in% "None") {
+    stratify_vars2.3$df <- stratify_vars$df_sub %>% select("ID") %>% mutate(dummy_s=1)
+    stratify_vars2.3$df2 <- stratify_vars2.3$df
+    
+    varnames2.3$df <- names(stratify_vars$df_full)
+    
+    
+  })
+  
+  
+  ##create the appropriate stratify_vars2.3$df 
+  observeEvent(input$rheatmap1, {
+    
+    if(!input$rheatmaporder %in% c("ID", "None", "Response")) {
+        stratify_vars2.3$df <- stratify_vars$df_full %>% select_("ID", input$rheatmaporder) %>%
+          group_by(ID) %>%
+          summarise_at(input$rheatmaporder, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                      ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+          return(y)}) %>% 
+          ungroup() 
+      }
+    
+    else {stratify_vars2.3$df <- stratify_vars$df_sub %>% select_("ID") %>% mutate(dummy_s = 1)}
+    
+  })
+  
+  ##Color vars dataset, upon action button, stratify_vars2.2$df2 will update based on variable and quantile selection
+  
+  observeEvent(input$rheatmap1, ignoreInit = T, {
+    
+    stratify_vars2.3$df2 <-  
       
-      dataset() %>% 
-        select_(names(dataset())[[1]], names(dataset())[[input$table5_rows_selected]]) %>%
-        mutate_at(names(dataset())[1], funs(factor)) %>%
-        group_by_(names(dataset())[1]) %>%
-        summarise_all(mymean) %>%
-        left_join(stratify_vars$df2)
+      if(input$rheatmaporder %in% c("None", "Response")) {stratify_vars2.3$df}
+    
+      else {stratify_vars2.3$df %>% 
+            rename_at(vars(input$rheatmaporder), ~ paste0(input$rheatmaporder, "_s"))
+      
+    }
+  })
+  
+  #Random plot
+  
+  #make plot update after new variables are selected
+  rheatmapvariables <- reactiveValues(var = "ID", order = "Response")
+  
+  #default heatmap var
+  observeEvent(input$go, priority = -1, {
+   
+  rheatmapvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+  
+  })
+  
+  
+  
+  rheatmaprandbutton <- reactiveValues(r1=NULL, r2=NULL)
+  
+  observeEvent(input$rheatmaprandom, priority = 2, ignoreInit = T, {
+    
+    rheatmaprandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    
+    rheatmaprandbutton$r2 <- sample(1:length(varnames2.3$df), 1)
+    
+    
+    if("Main Var." %in% input$rheatmaprand_choice) {rheatmapvariables$var <- names(dataset())[[rheatmaprandbutton$r1]]}
+    
+    if("Order Var." %in% input$rheatmaprand_choice) {rheatmapvariables$order <- varnames2.3$df[[rheatmaprandbutton$r2]]}
+    
+  })
+  
+  
+  ##Data for response boxplots
+  
+  rheatmapdata <- reactiveValues(l=NULL, m=NULL)
+  
+  observeEvent(input$rheatmap1, ignoreInit = T, {
+    
+    #Main heatmap
+    
+    rheatmapdata$l <-   
+    
+    if(input$rheatmaporder %in% "None"){
+    
+        dataset() %>% 
+          select_("ID", "timepoint", input$rheatmapvar) %>%
+          group_by_("ID") %>%
+          summarise_all(mymean) %>%
+          left_join(stratify_vars2.3$df2, by="ID")
+        
     }
     
-    else if (input$heatselectR %in% "Response") {
+    else if (input$rheatmaporder %in% "Response") {
       
       dataset() %>% 
-        select_(names(dataset())[[1]], names(dataset())[[input$table5_rows_selected]]) %>%
-        mutate_at(names(dataset())[1], funs(as.character)) %>%
-        group_by_(names(dataset())[1]) %>%
+        select_("ID", "timepoint", input$rheatmapvar) %>%
+        group_by_("ID") %>%
         summarise_all(mymean) %>%
-        left_join(stratify_vars$df2) %>%
-        arrange_(names(dataset())[input$table5_rows_selected])
+        left_join(stratify_vars2.3$df2, by="ID") %>%
+        arrange_(input$rheatmapvar)
     }
     
     else {
-      
+    
       dataset() %>% 
-        select_(names(dataset())[[1]], names(dataset())[[input$table5_rows_selected]]) %>%
-        mutate_at(names(dataset())[1], funs(as.character)) %>%
-        group_by_(names(dataset())[1]) %>%
+        select_("ID", "timepoint", input$rheatmapvar) %>%
+        group_by_("ID") %>%
         summarise_all(mymean) %>%
-        left_join(stratify_vars$df2) %>%
-        arrange_(input$heatselectR, names(dataset())[input$table5_rows_selected])
+        left_join(stratify_vars2.3$df2, by="ID") %>%
+        arrange_(varorder2.3$l, input$rheatmapvar)
     }
     
+    #Time of day plot
     
-  })
-  })
-  
-  ##Data for timeofday heatmap
-  heatdataR <- reactive({withProgress(message = 'Loading Data for Heatmap 2', value = 0, {
-  
-  if (input$heatdata %in% "raw") {
+    rheatmapdata$m <- 
     
-    dataset() %>% 
-      select_(names(dataset())[[1]], "timeofday", "weekday",  names(dataset())[[input$table5_rows_selected]]) %>%
-      mutate_at(names(dataset())[1], funs(factor)) %>%
-      group_by_(names(dataset())[1], input$heatstratR) %>%
-      summarise_all(mymean) %>%
-      left_join(select(stratify_vars$df2, -timeofday, -weekday))
-    
-  }  
-    
-  else if (input$heatdata %in% "subject normalized") {
-      dataset() %>% 
-      select_(names(dataset())[[1]], "timeofday", "weekday",  names(dataset())[[input$table5_rows_selected]]) %>%
-      mutate_at(names(dataset())[1], funs(factor)) %>%
-      group_by_(names(dataset())[1]) %>%
-      mutate_at(names(dataset())[[input$table5_rows_selected]], .funs = funs(normalize)) %>%
-      ungroup() %>%
-      group_by_(names(dataset())[1], input$heatstratR) %>%
-      summarise_all(mymean) %>%
-      left_join(select(stratify_vars$df2, -timeofday, -weekday))
-    
-  }
-  })
-  })
-  
-  
-  ##Code for main heatmap
-  output$freqheat_dR <- renderPlotly({
-    
-    if(input$heatselectR %in% c("None", "Response")) {
+    if (input$rheatmapraw %in% "raw") {
       
-      ggplotly(ggplot(heatdata_dR()) + 
-                 geom_tile(aes_string(y=names(heatdata_dR())[1], x=factor("All"), fill=names(heatdata_dR())[2])) +
-                 labs(y="", x="", title=names(heatdata_dR())[2], fill="") +
-                 scale_fill_distiller(palette = "RdYlGn", direction = 1) +
-                 scale_y_discrete(limits=eval(parse(text=paste0("heatdata_dR()$", names(heatdata_dR())[1])))) +
-                 theme_bw() +
-                 theme(plot.margin = margin(t = 30, b = 10),
-                       axis.text.y = element_blank(),
-                       axis.ticks.x = element_blank(),
-                       axis.ticks.y = element_blank(),
-                       axis.title.y = element_blank(),
-                       legend.title = element_blank(),
-                       panel.border = element_blank(),
-                       panel.background = element_blank(),
-                       panel.grid = element_blank())
-      )
+        dataset() %>% 
+        select_("ID", "timeofday", "weekday", input$rheatmapvar) %>%
+        group_by_("ID", input$rheatmapstrat) %>%
+        summarise_all(mymean) %>%
+        left_join(stratify_vars2.3$df2, by="ID")
     }
     
-    else {
+    else if (input$rheatmapraw %in% "subject normalized") {
       
-      ggplotly(ggplot(heatdata_dR(), aes_string(label=input$heatselectR)) + 
-                 geom_tile(aes_string(y=names(heatdata_dR())[1], x=factor("All"), fill=names(heatdata_dR())[2])) +
-                 labs(y="", x="", title=names(heatdata_dR())[2], fill="") +
-                 scale_fill_distiller(palette = "RdYlGn", direction = 1) +
-                 scale_y_discrete(limits=eval(parse(text=paste0("heatdata_dR()$", names(heatdata_dR())[1])))) +
-                 theme_bw() +
-                 theme(plot.margin = margin(t = 30, b = 10),
-                       axis.text.y = element_blank(),
-                       axis.ticks.x = element_blank(),
-                       axis.ticks.y = element_blank(),
-                       axis.title.y = element_blank(),
-                       legend.title = element_blank(),
-                       panel.border = element_blank(),
-                       panel.background = element_blank(),
-                       panel.grid = element_blank())
-               
-      )
-    } 
+      if (input$rheatmapvar %in% "ID") {
+        
+        dataset() %>% 
+          select_("ID", "timeofday", "weekday", input$rheatmapvar) %>%
+          group_by_("ID", input$rheatmapstrat) %>%
+          summarise_all(mymean) %>%
+          left_join(stratify_vars2.3$df2, by="ID")
+      }
+      
+      else {
+   
+        dataset() %>% 
+        select_("ID", "timeofday", "weekday", input$rheatmapvar) %>%
+        group_by_("ID") %>%
+        mutate_at(input$rheatmapvar, .funs = funs(normalize)) %>%
+        ungroup() %>%
+        group_by_("ID", input$rheatmapstrat) %>%
+        summarise_all(mymean) %>%
+        left_join(stratify_vars2.3$df2, by="ID")
+      }
+    }
     
+  })
+  
+
+  #dummy variable to control plot, since plot runs automatically when page is selected, will make it dependent on a reactive value that updates 
+  #once the "create plot" button is clicked.
+  
+  rheatmap_dummy <- reactiveValues(l=0)
+  
+  observeEvent(input$rheatmap1, ignoreInit = T, {
+    if (rheatmap_dummy$l==0) {rheatmap_dummy$l <- 1}
+    else NULL
+  })
+  
+  ##Reset plot when dataset changes
+  
+  observeEvent(input$go, {
+    rheatmap_dummy$l <- 0
+    
+  })
+  
+  ##Instructions that appear before create plot button is clicked
+  
+  output$rheatmap_instr <-  renderText(
+    if(rheatmap_dummy$l==0) {"Click the [Create/Update Plot] button to generate plot!"}
+    else NULL 
+  )
+  
+  output$heatmapR <- renderPlotly({
+    
+    input$rheatmap1
+    
+    isolate(
+      
+      if(rheatmap_dummy$l==0) NULL
+      
+      else {
+        
+        if (varorder2.3$l  %in% c("None", "Response")) {
+          
+          ggplotly(ggplot(rheatmapdata$l) + 
+                     geom_tile(aes_string(y="ID", x=factor("All"), fill=input$rheatmapvar)) +
+                     labs(y="", x="", title=input$rheatmapvar, fill="") +
+                     scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                     scale_y_discrete(limits=eval(parse(text=paste0("rheatmapdata$l$ID")))) +
+                     theme_bw() +
+                     theme(plot.margin = margin(t = 30, b = 10),
+                           axis.text.y = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           axis.ticks.y = element_blank(),
+                           axis.title.y = element_blank(),
+                           legend.title = element_blank(),
+                           panel.border = element_blank(),
+                           panel.background = element_blank(),
+                           panel.grid = element_blank())
+          )
+        }
+        
+        else {
+          
+          ggplotly(ggplot(rheatmapdata$l, aes_string(label=varorder2.3$l)) + 
+                     geom_tile(aes_string(y="ID", x=factor("All"), fill=input$rheatmapvar)) +
+                     labs(y="", x="", title=input$rheatmapvar, fill="") +
+                     scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                     scale_y_discrete(limits=eval(parse(text=paste0("rheatmapdata$l$ID")))) +
+                     theme_bw() +
+                     theme(plot.margin = margin(t = 30, b = 10),
+                           axis.text.y = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           axis.ticks.y = element_blank(),
+                           axis.title.y = element_blank(),
+                           legend.title = element_blank(),
+                           panel.border = element_blank(),
+                           panel.background = element_blank(),
+                           panel.grid = element_blank())
+                   
+          )
+        } 
+      }
+    )
   })
   
   
   ##Code for timeofday/weekday heatmap
-  output$freqheatR <- renderPlotly({
+  output$heatmapTODR <- renderPlotly({
     
-    if (input$heatselectR %in% c("None", "Response")) {  
-      
-      ggplotly(ggplot(heatdataR()) + 
-                 geom_tile(aes_string(x=input$heatstratR, y=names(heatdataR())[1], fill=names(heatdataR())[4])) +
-                 labs(x="", y="Subject ID", title=paste0(names(heatdataR())[4], " ", input$heatstratR), fill="") +
-                 scale_fill_distiller(palette = "RdYlGn", direction = 1) +
-                 scale_x_discrete(limits = levels(eval(parse(text=paste0("heatdataR()$", input$heatstratR))))) +
-                 scale_y_discrete(limits=eval(parse(text=paste0("heatdata_dR()$", names(heatdata_dR())[1])))) +
-                 theme_bw() +
-                 theme(plot.margin = margin(t = 30, b = 10),
-                       axis.text.y = element_blank(),
-                       axis.ticks.x = element_blank(),
-                       axis.ticks.y = element_blank(),
-                       axis.title.y = element_blank(),
-                       legend.title = element_blank(),
-                       panel.border = element_blank(),
-                       panel.background = element_blank(),
-                       panel.grid = element_blank())
-               
-      ) 
-    }
+    input$rheatmap1
     
-    else {
+    isolate(
       
-      ggplotly(ggplot(heatdataR(), aes_string(label=input$heatselectR)) + 
-                 geom_tile(aes_string(x=input$heatstratR, y=names(heatdataR())[1], fill=names(heatdataR())[4])) +
-                 labs(x="", y="Subject ID", title=paste0(names(heatdataR())[4], " ", input$heatstratR), fill="") +
-                 scale_fill_distiller(palette = "RdYlGn", direction = 1) +
-                 scale_x_discrete(limits = levels(eval(parse(text=paste0("heatdataR()$", input$heatstratR))))) +
-                 scale_y_discrete(limits=eval(parse(text=paste0("heatdata_dR()$", names(heatdata_dR())[1])))) +
-                 theme_bw() +
-                 theme(plot.margin = margin(t = 30, b = 10),
-                       axis.text.y = element_blank(),
-                       axis.ticks.x = element_blank(),
-                       axis.ticks.y = element_blank(),
-                       axis.title.y = element_blank(),
-                       legend.title = element_blank(),
-                       panel.border = element_blank(),
-                       panel.background = element_blank(),
-                       panel.grid = element_blank())
-               
-      ) 
-    }
+      if(rheatmap_dummy$l==0) NULL
+      
+      else {
+        
+        if (varorder2.3$l  %in% c("None", "Response")) {
+          
+          ggplotly(ggplot(rheatmapdata$m) + 
+                     geom_tile(aes_string(x=input$rheatmapstrat, y="ID", fill=input$rheatmapvar)) +
+                     labs(x="", y="Subject ID", title=paste0(input$rheatmapvar, " ", input$rheatmapstrat), fill="") +
+                     scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                     scale_x_discrete(limits = levels(eval(parse(text=paste0("rheatmapdata$m$", input$rheatmapstrat))))) +
+                     scale_y_discrete(limits=eval(parse(text=paste0("rheatmapdata$m$ID")))) +
+                     theme_bw() +
+                     theme(plot.margin = margin(t = 30, b = 10),
+                           axis.text.y = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           axis.ticks.y = element_blank(),
+                           axis.title.y = element_blank(),
+                           legend.title = element_blank(),
+                           panel.border = element_blank(),
+                           panel.background = element_blank(),
+                           panel.grid = element_blank())
+                   
+          ) 
+        }
+        
+        else {
+          
+          ggplotly(ggplot(rheatmapdata$m, aes_string(label=varorder2.3$l)) + 
+                     geom_tile(aes_string(x=input$rheatmapstrat, y="ID", fill=input$rheatmapvar)) +
+                     labs(x="", y="Subject ID", title=paste0(input$rheatmapvar, " ", input$rheatmapstrat), fill="") +
+                     scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                     scale_x_discrete(limits = levels(eval(parse(text=paste0("rheatmapdata$m$", input$rheatmapstrat))))) +
+                     scale_y_discrete(limits=eval(parse(text=paste0("rheatmapdata$m$ID")))) +
+                     theme_bw() +
+                     theme(plot.margin = margin(t = 30, b = 10),
+                           axis.text.y = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           axis.ticks.y = element_blank(),
+                           axis.title.y = element_blank(),
+                           legend.title = element_blank(),
+                           panel.border = element_blank(),
+                           panel.background = element_blank(),
+                           panel.grid = element_blank())
+          )
+        }
+      }
+    )
   })
+  
+  
+  
   
   
   
