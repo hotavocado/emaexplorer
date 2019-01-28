@@ -110,31 +110,75 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                         
                                         conditionalPanel(condition = "input.conditionedPanels == 'Compliance Boxplot'",
                                                         
-                                                         h4("Boxplot Options:"),
+                                                         h4('Main Variable Options'),
                                                          
-                                                         uiOutput("boxselect"),
+                                                         uiOutput("boxplotvar"),
                                                          
-                                                         radioButtons("boxradio", "Quantiles:",
+                                                         hr(),
+                                                         
+                                                         h4('Color Variable Options'), 
+                                                         
+                                                         uiOutput("boxplotcolor"),
+                                                         
+                                                         radioButtons("boxplotradio", "Quantiles:",
                                                                       c("Auto", "On", "Off"), inline = T),
                                                          
-                                                         sliderInput("boxntile", "Number of Quantiles:",
+                                                         sliderInput("boxplotntile", "Number of Quantiles:",
                                                                      min = 2, max = 10,
                                                                      value = 4, step = 1),
+                                                         hr(),
                                                          
-                                                         actionButton("box1", "Update Plot")
+                                                         h4('Random Variable Options'),
+                                                         
+                                                         checkboxGroupInput("boxplotrand_choice", label = "Choose Random Inputs:", choices = c("Main Var.", "Color Var."), selected = c("Main Var.", "Color Var."),
+                                                                            inline = T, width = 300), 
+                                                         actionButton("boxplotrandom", "Random Vars"),
+                                                         
+                                                         hr(),
+                                                         
+                                                         actionButton("boxplot1", "Create/Update Plot")
                                         
                                         ),
                                         
                                         conditionalPanel(condition = "input.conditionedPanels == 'Compliance Heatmap'",
                                                          
-                                                         h4("Heatmap Options:"),
+                                                         h4('Main Variable Options'),
                                                          
-                                                         uiOutput("heatselect"),
+                                                         uiOutput("heatmapvar"),
                                                          
-                                                         selectInput("heatstrat", 
-                                                                     label = "Stratify by:", 
+                                                         hr(),
+                                                         
+                                                         h4('Ordering Variable Options'), 
+                                                         
+                                                         uiOutput("heatmaporder"),
+                                                         
+                                                         hr(),
+                                                         
+                                                         h4('Plot 2 Options'),
+                                                         
+                                                         selectInput("heatmapraw", 
+                                                                     label = "Data Type:", 
+                                                                     choices = c("raw", "subject normalized"),
+                                                                     selected = "raw"),
+                                                         
+                                                         selectInput("heatmapstrat", 
+                                                                     label = "Stratify By:", 
                                                                      choices = c("timeofday", "weekday"),
-                                                                     selected = "timeofday")
+                                                                     selected = "timeofday"),
+                                                         
+                                                         hr(),
+                                                         
+                                                         h4('Random Variable Options'),
+                                                         
+                                                         checkboxGroupInput("heatmaprand_choice", label = "Choose Random Inputs:", choices = c("Main Var.", "Order Var."), selected = c("Main Var.", "Order Var."),
+                                                                            inline = T, width = 300), 
+                                                         actionButton("heatmaprandom", "Random Vars"),
+                                                         
+                                                         hr(),
+                                                         
+                                                         actionButton("heatmap1", "Create/Update Plot")
+                                                         
+                                                         
                                                          
                                         )
                                         
@@ -174,8 +218,9 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                            
                                   column(8,
                                          div(style = "height:10px"),
-                                         plotlyOutput("boxplot_d", height = 350),
-                                         plotlyOutput("boxplot", height = 200),
+                                         verbatimTextOutput("boxplot_instr"),
+                                         plotlyOutput("boxplot", height = 350),
+                                         plotlyOutput("boxplotTOD", height = 200),
                                          div(style = "height:25px"))
                                            
                                   #column(4,
@@ -198,20 +243,16 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                   
                                   column(1),
                                   
+                                  column(8,
+                                         verbatimTextOutput("heatmap_instr")),
+                                  
                                   column(2,
-                                         plotlyOutput("freqheat_d", height = 600)),
+                                         plotlyOutput("heatmap", height = 600)),
                                        
                                   column(6,
-                                         plotlyOutput("freqheat", height = 600)),
+                                         plotlyOutput("heatmapTOD", height = 600))
                                   
-                                  column(4,
-                                         h6("Survey Question/Variable Description:"),
-                                         verbatimTextOutput("code1")),
-                                  
-                                  column(4, 
-                                         h6("Response:"),
-                                         verbatimTextOutput("code2"))
-                                           
+                            
                                 )
                               )
                             )
@@ -1307,7 +1348,7 @@ server <- function(input, output){
                                   else if (input$sort==3) {cat(paste(shQuote(limits3(), type="cmd"), collapse=", "))})
   
   
-  #Compliance Page 2: boxplot, stat summary table----------------------------------------------------------------------------------------------------
+  #Compliance Page 2, boxplot of compliance-----------------------------------------------------------------------------------------------------
   
   ##data table for boxplot
   output$table1 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
@@ -1320,190 +1361,305 @@ server <- function(input, output){
                                            "}")
                                        ))), callback = JS('table.page(3).draw(false);'))
   
-                    
   
-  ##stratify dataset loses column selected by table
-  observeEvent(input$table1_rows_selected, {
-    stratify_vars$df2 <- stratify_vars$df %>% select(-c(names(dataset())[[input$table1_rows_selected]]))
+  #Select main variable
+  output$boxplotvar <- renderUI({selectInput('boxplotvar', 'Main Variable:', c(names(dataset())), selected = boxplotvariables$var, selectize=TRUE)})
+  
+  
+  
+  #Select coloring variable
+  output$boxplotcolor <- renderUI({selectInput('boxplotcolor', 'Color By:', c("None", varnames1.2$df), selected = boxplotvariables$color, selectize=TRUE)})
+  
+  
+  #boxplot color variable
+  varcolor1.2 <- reactiveValues(l="ID")
+  
+  observeEvent(input$boxplot1, {if (input$boxplotcolor %in% c("ID", "None")) {varcolor1.2$l <- input$boxplotcolor}
+    else {varcolor1.2$l <- paste0(input$boxplotcolor, "_s")} 
   })
   
-
-
-  ##Stratify select for main boxplot
-  varnames <- reactiveValues(l=NULL)
- 
-  observeEvent(input$table1_rows_selected, {
-    varnames$l <- names(stratify_vars$df2)[1:ncol(stratify_vars$df2)]
+  # output$boxselectR <- renderUI({selectInput('boxselectR', 'Stratify by:', c("None", varnames$l), selectize=TRUE)})
+  
+  
+  ##Use varnames so updating stratify_vars3.1$df2 doesn't refresh subbrowsecolor
+  varnames1.2 <- reactiveValues(df=NULL)
+  
+  
+  ##Color datasets
+  stratify_vars1.2 <- reactiveValues(df = NULL, df2 = NULL)
+  
+  ##Default datasets
+  observeEvent(input$go, priority = -1, {
+    
+    stratify_vars1.2$df <- stratify_vars$df_sub %>% select("ID") %>% mutate(dummy_s=1)
+    stratify_vars1.2$df2 <- stratify_vars1.2$df
+    
+    varnames1.2$df <- names(stratify_vars$df_full)
+    
+    
   })
   
-  output$boxselect <- renderUI({selectInput('boxselect', 'Stratify by:', c("None", varnames$l), selectize=TRUE)})
-
   
-  ##Stratify vars dataset
-  #use action button
-  observeEvent(input$box1, {
-    stratify_vars$df2 <-  
-      if (!input$boxselect %in% "None"){
-        if(input$boxradio %in% "Auto"){
-          stratify_vars$df %>% select(-c(names(dataset())[[input$table1_rows_selected]])) %>%
-             mutate_at(input$boxselect, function (x) { if (class(x) %in% "character") {x}
-               else if (class(x) %in% c("numeric", "integer") & length(unique(x)) > 20) {my_ntiles(x , input$boxntile) }
-               else if (class(x) %in% c("numeric", "integer") & length(unique(x)) <= 20) {factor(x)}
-               else {x=NA}
-               }
-             )
-        }
-        
-        else if (input$boxradio %in% "On"){
-          stratify_vars$df %>% select(-c(names(dataset())[[input$table1_rows_selected]])) %>%
-            mutate_at(input$boxselect, ~my_ntiles(.x, input$boxntile))
-            
-        }
-        
-        else if (input$boxradio %in% "Off"){stratify_vars$df %>% select(-c(names(dataset())[[input$table1_rows_selected]]))}
-            
+  ##create the appropriate stratify_vars1.2$df 
+  observeEvent(input$boxplot1, {
+    
+    if(!input$boxplotcolor %in% c("ID", "None")) {
+      stratify_vars1.2$df <- stratify_vars$df_full %>% select_("ID", input$boxplotcolor) %>%
+        group_by(ID) %>%
+        summarise_at(input$boxplotcolor, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                   ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+        return(y)}) %>% 
+        ungroup() 
+    }
+    
+    else {stratify_vars1.2$df <- stratify_vars$df_sub %>% select_("ID") %>% mutate(dummy_s = 1)}
+    
+  })
+  
+  ##Color vars dataset, upon action button, stratify_vars1.2$df2 will update based on variable and quantile selection
+  
+  observeEvent(input$boxplot1, ignoreInit = T, {
+    
+    stratify_vars1.2$df2 <-  
+      
+      
+      if(input$boxplotcolor %in% c("ID", "None")) {stratify_vars1.2$df}
+    
+    else {
+      if(input$boxplotradio %in% "Auto"){
+        stratify_vars1.2$df %>% 
+          mutate_at(input$boxplotcolor, function (x) { if (is.character(x) | is.factor(x)) {x}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) > 20) {my_ntiles(x, input$boxplotntile)}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) <= 20) {factor(x, ordered = T, exclude = c(NA, "NaN"))}
+            else {x=NA}
+          }) %>% 
+          rename_at(vars(input$boxplotcolor), ~ paste0(input$boxplotcolor, "_s"))
+      }
+      
+      else if (input$boxplotradio %in% "On"){
+        stratify_vars1.2$df %>% 
+          mutate_at(input$boxplotcolor, ~my_ntiles(.x, input$boxplotntile)) %>%
+          rename_at(vars(input$boxplotcolor), ~ paste0(input$boxplotcolor, "_s"))
         
       }
+      
+      else if (input$boxplotradio %in% "Off"){
+        stratify_vars1.2$df %>% 
+          rename_at(vars(input$boxplotcolor), ~ paste0(input$boxplotcolor, "_s"))
+        
+      }
+    }
     
-      else {stratify_vars$df2}
   })
   
-  #
-  varcolor1.2 <- reactiveValues(l="None")
   
-  observeEvent(input$box1, {varcolor1.2$l <- input$boxselect})
+  #Random plot
   
-  #observeEvent(input$table1_rows_selected, {varcolor1.2$l <- "None"})
-
+  #make plot update after new variables are selected
+  
+  boxplotvariables <- reactiveValues(var = "ID", color = "None")
+  
+  #Default boxplot variable
+  observeEvent(input$go, priority = -1, {
     
-  ##Data for main boxplot
+    boxplotvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+  })
+  
+  boxplotrandbutton <- reactiveValues(r1=NULL, r2=NULL)
+  
+  observeEvent(input$boxplotrandom, priority = 2, ignoreInit = T, {
+    
+    boxplotrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    
+    boxplotrandbutton$r2 <- sample(1:length(varnames1.2$df), 1)
+    
+    
+    if("Main Var." %in% input$boxplotrand_choice) {boxplotvariables$var <- names(dataset())[[boxplotrandbutton$r1]]}
+    
+    if("Color Var." %in% input$boxplotrand_choice) {boxplotvariables$color <- varnames1.2$df[[boxplotrandbutton$r2]]}
+    
+  })
   
   
-  boxdata_d <- reactive({withProgress(message = 'Loading Data for Boxplot 1', {
-    dataset() %>% 
-      select_(names(dataset())[1], names(dataset())[[input$table1_rows_selected]]) %>%
-      mutate_at(names(dataset())[1], funs(factor)) %>%
-      group_by_(names(dataset())[1]) %>%
-      summarise_all(countna) %>%
-      left_join(stratify_vars$df2, by="ID")
-    })
-    })
+  ##Data for response boxplots
   
-  ##Data for timeofday boxplot
-  boxdata <- reactive({withProgress(message = 'Loading Data for Boxplot 2', {
+  boxplotdata <- reactiveValues(l=NULL, m=NULL)
+  
+  observeEvent(input$boxplot1, ignoreInit = T, {
+    
+    
+    boxplotdata$l <- 
       dataset() %>% 
-      select_(names(dataset())[[1]], "timeofday", names(dataset())[[input$table1_rows_selected]]) %>%
-      mutate_at(names(dataset())[1], funs(factor)) %>%
-      group_by_(names(dataset())[1], "timeofday") %>%
+      select_("ID", "timepoint", input$boxplotvar) %>%
+      group_by_("ID") %>%
+      summarise_all(countna) %>%
+      left_join(stratify_vars1.2$df2, by="ID")
+    
+    #time of day boxplot
+    boxplotdata$m <- 
+      dataset() %>% 
+      select_("ID", "timepoint", "timeofday", input$boxplotvar) %>%
+      group_by_("ID", "timeofday") %>%
       summarise_all(countna)
+    
   })
+  
+  
+  
+  #dummy variable to control plot, since plot runs automatically when page is selected, will make it dependent on a reactive value that updates 
+  #once the "create plot" button is clicked.
+  
+  boxplot_dummy <- reactiveValues(l=0)
+  
+  observeEvent(input$boxplot1, ignoreInit = T, {
+    if (boxplot_dummy$l==0) {boxplot_dummy$l <- 1}
+    else NULL
   })
+  
+  ##Reset plot when dataset changes
+  
+  observeEvent(input$go, {
+    boxplot_dummy$l <- 0
+    
+  })
+  
+  ##Instructions that appear before create plot button is clicked
+  
+  output$boxplot_instr <-  renderText(
+    if(boxplot_dummy$l==0) {"Click the [Create/Update Plot] button to generate plot!"}
+    else NULL 
+  )
+  
   
   ##Main boxplot code
-  output$boxplot_d <- renderPlotly({
-    
-    if (varcolor1.2$l %in% "None") {
-      
-      ggplotly(ggplot(data=boxdata_d(), aes_string(x=factor(0),
-                                                   y=names(boxdata_d())[2],
-                                                   label=names(boxdata_d())[1]
-      ))+ 
-        geom_boxplot(size=.5, fatten=1)+
-        geom_jitter(alpha=0.2, size=1.2, shape=19, position = position_jitter(w = 0.5, h = 0.1))+
-        stat_summary(fun.data = mean_cl_normal, geom="pointrange", size=2, alpha=.8, 
-                     position=position_dodge(width=0.75), shape=4, color="firebrick")+
-        labs(y=NULL, x=NULL, title=names(boxdata_d())[2])+
-        theme_bw()+
-        theme(axis.title.x=element_blank(), axis.title.y=element_text(size=8), 
-              axis.text.x = element_text(size=8, vjust = 1, color="gray65"), 
-              axis.text.y = element_blank(),
-              axis.line = element_line(color="gray65", size=0.5),
-              axis.ticks.y = element_blank(),
-              axis.ticks.x = element_line(colour = "gray"),
-              panel.grid.major = element_blank(), 
-              panel.grid.minor = element_blank(), 
-              panel.background = element_blank(),
-              panel.border = element_blank(),
-              #plot.margin = unit( c(0,3,3,0) , "in"),
-              aspect.ratio = 0.3) +
-              #legend.position="none")+
-        coord_flip(ylim=c(0, max(boxdata_d()[2])), expand = c(0.1,0))+
-        scale_y_continuous(breaks=seq(0, max(boxdata_d()[2]), by = 4))
-      )
-    }
-    
-    else {  
-      
-      ggplotly(ggplot(data=boxdata_d(), aes_string(x=varcolor1.2$l,
-                                                   y=names(boxdata_d())[2],
-                                                   label=names(boxdata_d())[1], 
-                                                   color=varcolor1.2$l))+ 
-                 geom_boxplot(size=.5, fatten=1)+
-                 geom_jitter(alpha=0.2, size=1.2, shape=19, position = position_jitter(w = 0.5, h = 0.1))+
-                 stat_summary(fun.data = mean_cl_normal, geom="pointrange", size=2, alpha=.8, 
-                              position=position_dodge(width=0.75), shape=4, color="firebrick")+
-                 #stat_summary(fun.data = give.n, geom = "text", color="firebrick", size=4) +
-                 labs(y=NULL, x=NULL, title=names(boxdata_d())[2])+
-                 theme_bw()+
-                 theme(axis.title.x=element_blank(), axis.title.y=element_text(size=8), 
-                       axis.text.x = element_text(size=8, vjust = 1, color="gray65"), 
-                       axis.text.y = element_text(size=10),
-                       axis.line = element_line(color="gray65", size=0.5),
-                       axis.ticks.y = element_blank(),
-                       axis.ticks.x = element_line(colour = "gray"),
-                       panel.grid.major = element_blank(), 
-                       panel.grid.minor = element_blank(), 
-                       panel.background = element_blank(),
-                       panel.border = element_blank(),
-                       plot.margin = unit( c(0.5,0.5,0.5,1) , "cm"),
-                       aspect.ratio = 0.3)+
-                       #legend.position="none")+
-                 coord_flip(ylim=c(0, max(boxdata_d()[2])), expand = c(0.1,0))+
-                 scale_y_continuous(breaks=seq(0, max(boxdata_d()[2]), by = 4))
-      )
-      
-    }
-    
-  })
-  
-  
-  
-  ##Timeofday boxplot code
   output$boxplot <- renderPlotly({
     
-    ggplotly(ggplot(data=boxdata(), aes_string(x="timeofday", 
-                                               y=names(boxdata())[3], 
-                                               color="timeofday", label=names(boxdata())[1]))+
-               geom_boxplot(size=.5, fatten=1)+
-               #geom_jitter(alpha=0.2, size=1.2, shape=19, position = position_jitter(w = 0.5, h = 0.1))+
-               stat_summary(fun.data = mean_cl_normal, geom="pointrange", size=2, alpha=.8, 
-                            position=position_dodge(width=0.75), shape=4, color="firebrick")+
-               labs(y=NULL, x=NULL, title="")+
-               scale_x_discrete(limits = rev(levels(boxdata()$timeofday)))+
-               theme_bw()+
-               theme(axis.title.x=element_blank(), axis.title.y=element_text(size=8), 
-                     axis.text.x = element_text(size=8, vjust = 1, color="gray65"), 
-                     axis.text.y = element_text(size=10),
-                     axis.line = element_line(color="gray65", size=0.5),
-                     axis.ticks.y = element_blank(),
-                     axis.ticks.x = element_line(colour = "gray"),
-                     panel.grid.major = element_blank(), 
-                     panel.grid.minor = element_blank(), 
-                     panel.background = element_blank(),
-                     panel.border = element_blank(),
-                     #plot.margin = unit( c(0,3,3,0) , "in"),
-                     aspect.ratio = 0.2,
-                     legend.position="none")+
-               coord_flip(ylim=c(0, max(boxdata()[3])), expand = c(0.1,0))+
-               scale_y_continuous(breaks=c(0:max(boxdata()[3])))
+    input$boxplot1
+    
+    isolate(
+      
+      if(boxplot_dummy$l==0) NULL
+      
+      else {
+        
+        if (varcolor1.2$l  %in% "None") {
+          
+          ggplotly(ggplot(data=boxplotdata$l, aes_string(x=factor(0),
+                                                         y=input$boxplotvar,
+                                                         label="ID"))+ 
+                     geom_boxplot(size=.5, fatten=1)+
+                     geom_jitter(alpha=0.2, size=1.2, shape=19, position = position_jitter(w = 0.5, h = 0.1))+
+                     stat_summary(fun.data = mean_cl_normal, geom="pointrange", size=2, alpha=.8, 
+                                  position=position_dodge(width=0.75), shape=4, color="firebrick")+
+                     labs(y=NULL, x=NULL, title=input$boxplotvar)+
+                     theme_bw()+
+                     theme(axis.title.x=element_blank(), axis.title.y=element_text(size=8), 
+                           axis.text.x = element_text(size=8, vjust = 1, color="gray65"), 
+                           axis.text.y = element_blank(),
+                           axis.line = element_line(color="gray65", size=0.5),
+                           axis.ticks.y = element_blank(),
+                           axis.ticks.x = element_line(colour = "gray"),
+                           panel.grid.major = element_blank(), 
+                           panel.grid.minor = element_blank(), 
+                           panel.background = element_blank(),
+                           panel.border = element_blank(),
+                           #plot.margin = unit( c(0,3,3,0) , "in"),
+                           aspect.ratio = 0.3) +
+                     #legend.position="none")+
+                     coord_flip()
+                   #coord_flip(ylim=c(0, max(boxdata_dR()[4])), expand = c(0.1,0))+
+                   #scale_y_continuous(breaks=seq(0, max(boxdata_dR()[2]), by = 4))
+          )
+        }
+        
+        else {  
+          
+          ggplotly(ggplot(data=boxplotdata$l, aes_string(x=varcolor1.2$l ,
+                                                         y=input$boxplotvar,
+                                                         label="ID", color=varcolor1.2$l))+ 
+                     geom_boxplot(size=.5, fatten=1)+
+                     geom_jitter(alpha=0.2, size=1.2, shape=19, position = position_jitter(w = 0.5, h = 0.1))+
+                     stat_summary(fun.data = mean_cl_normal, geom="pointrange", size=2, alpha=.8, 
+                                  position=position_dodge(width=0.75), shape=4, color="firebrick")+
+                     #stat_summary(fun.data = give.n, geom = "text", color="firebrick", size=4) +
+                     labs(y=NULL, x=NULL, title=input$boxplotvar)+
+                     theme_bw()+
+                     theme(axis.title.x=element_blank(), axis.title.y=element_text(size=8), 
+                           axis.text.x = element_text(size=8, vjust = 1, color="gray65"), 
+                           axis.text.y = element_text(size=10),
+                           axis.line = element_line(color="gray65", size=0.5),
+                           axis.ticks.y = element_blank(),
+                           axis.ticks.x = element_line(colour = "gray"),
+                           panel.grid.major = element_blank(), 
+                           panel.grid.minor = element_blank(), 
+                           panel.background = element_blank(),
+                           panel.border = element_blank(),
+                           plot.margin = unit( c(0.5,0.5,0.5,1) , "cm"),
+                           aspect.ratio = 0.3)+
+                     #legend.position="none")+
+                     coord_flip()
+                   #coord_flip(ylim=c(0, max(boxdata_dR()[4])), expand = c(0.1,0))+
+                   #scale_y_continuous(breaks=seq(0, max(boxdata_dR()[2]), by = 4))
+          )
+          
+          
+        }
+      }
+      
     )
     
   })
   
-  ##Codebook
+  
+  ##Timeofday boxplot code
+  
+  output$boxplotTOD <- renderPlotly({
+    
+    input$boxplot1
+    
+    isolate(
+      
+      if(boxplot_dummy$l==0) NULL
+      
+      else {
+        
+        ggplotly(ggplot(data=boxplotdata$m, aes_string(x="timeofday", 
+                                                       y=input$boxplotvar, 
+                                                       color="timeofday", label="ID"))+
+                   geom_boxplot(size=.5, fatten=1)+
+                   geom_jitter(alpha=0.2, size=1.2, shape=19, position = position_jitter(w = 0.5, h = 0.1))+
+                   stat_summary(fun.data = mean_cl_normal, geom="pointrange", size=2, alpha=.8, 
+                                position=position_dodge(width=0.75), shape=4, color="firebrick")+
+                   labs(y=NULL, x=NULL, title="")+
+                   scale_x_discrete(limits = rev(levels(boxplotdata$m[["timeofday"]])))+
+                   theme_bw()+
+                   theme(axis.title.x=element_blank(), axis.title.y=element_text(size=8), 
+                         axis.text.x = element_text(size=8, vjust = 1, color="gray65"), 
+                         axis.text.y = element_text(size=10),
+                         axis.line = element_line(color="gray65", size=0.5),
+                         axis.ticks.y = element_blank(),
+                         axis.ticks.x = element_line(colour = "gray"),
+                         panel.grid.major = element_blank(), 
+                         panel.grid.minor = element_blank(), 
+                         panel.background = element_blank(),
+                         panel.border = element_blank(),
+                         #plot.margin = unit( c(0,3,3,0) , "in"),
+                         aspect.ratio = 0.2,
+                         legend.position="none") +
+                   coord_flip()
+                 # scale_y_continuous(breaks=c(0:max(boxdataR()[3])))
+        )
+        
+      }
+      
+    )
+    
+  })
   
   
-  #Compliance Page 3: Heatmaps----------------------------------------------------------------------------------------------------
+  
+  #Compliances Page 3, heatmap of Compliances-----------------------------------------------------------------------------------------------------
   
   ##datatable for heatmaps
   output$table2 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
@@ -1517,167 +1673,317 @@ server <- function(input, output){
                                        ))), callback = JS('table.page(3).draw(false);'))
   
   
-  ##stratify dataset loses column selected by table
-  observeEvent(input$table2_rows_selected, {
-    stratify_vars$df2 <- stratify_vars$df %>% select(-c(names(dataset())[[input$table2_rows_selected]]))
+  #Select main variable
+  output$heatmapvar <- renderUI({selectInput('heatmapvar', 'Main Variable:', c(names(dataset())), selected = heatmapvariables$var, selectize=TRUE)})
+  
+  
+  
+  #Select ordering variable
+  output$heatmaporder <- renderUI({selectInput('heatmaporder', 'Order By:', c("None", "Compliance", varnames1.4$df), selected = heatmapvariables$order, selectize=TRUE)})
+  
+  
+  #heatmap order variable
+  varorder1.4 <- reactiveValues(l="ID")
+  
+  observeEvent(input$heatmap1, {if (input$heatmaporder %in% c("ID", "None", "Compliance")) {varorder1.4$l <- input$heatmaporder}
+    else {varorder1.4$l <- paste0(input$heatmaporder, "_s")} 
   })
   
   
+  ##Use varnames so updating stratify_vars3.1$df2 doesn't refresh subbrowseorder
+  varnames1.4 <- reactiveValues(df=NULL)
   
-  ##Stratify select for main heatmap
-  observeEvent(input$table2_rows_selected, {
-    varnames$l <- names(stratify_vars$df2)[1:ncol(stratify_vars$df2)]
-  })
   
-  output$heatselect <- renderUI({selectInput('heatselect', 'Order subjects by:', c("None", "Compliance", varnames$l), selectize=TRUE)})
+  ##order datasets
+  stratify_vars1.4 <- reactiveValues(df = NULL, df2 = NULL)
   
-
-  ##Data for main heatmap
-  heatdata_d <- reactive({withProgress(message = 'Loading Data for Heatmap 1', value = 0, {
+  ##Default datasets
+  observeEvent(input$go, priority = -1, {
     
-    if (input$heatselect %in% "None") {
-      
-      dataset() %>% 
-        select_(names(dataset())[[1]], names(dataset())[[input$table2_rows_selected]]) %>%
-        mutate_at(names(dataset())[1], funs(factor)) %>%
-        group_by_(names(dataset())[1]) %>%
-        summarise_all(countna) %>%
-        left_join(stratify_vars$df2)
+    stratify_vars1.4$df <- stratify_vars$df_sub %>% select("ID") %>% mutate(dummy_s=1)
+    stratify_vars1.4$df2 <- stratify_vars1.4$df
+    
+    varnames1.4$df <- names(stratify_vars$df_full)
+    
+    
+  })
+  
+  
+  ##create the appropriate stratify_vars1.4$df 
+  observeEvent(input$heatmap1, {
+    
+    if(!input$heatmaporder %in% c("ID", "None", "Compliance")) {
+      stratify_vars1.4$df <- stratify_vars$df_full %>% select_("ID", input$heatmaporder) %>%
+        group_by(ID) %>%
+        summarise_at(input$heatmaporder, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                   ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+        return(y)}) %>% 
+        ungroup() 
     }
     
-    else if (input$heatselect %in% "Compliance") {
+    else {stratify_vars1.4$df <- stratify_vars$df_sub %>% select_("ID") %>% mutate(dummy_s = 1)}
+    
+  })
+  
+  ##Color vars dataset, upon action button, stratify_vars2.2$df2 will update based on variable and quantile selection
+  
+  observeEvent(input$heatmap1, ignoreInit = T, {
+    
+    stratify_vars1.4$df2 <-  
+      
+      if(input$heatmaporder %in% c("None", "Compliance")) {stratify_vars1.4$df}
+    
+    else {stratify_vars1.4$df %>% 
+        rename_at(vars(input$heatmaporder), ~ paste0(input$heatmaporder, "_s"))
+      
+    }
+  })
+  
+  #Random plot
+  
+  #make plot update after new variables are selected
+  heatmapvariables <- reactiveValues(var = "ID", order = "Compliance")
+  
+  #default heatmap var
+  observeEvent(input$go, priority = -1, {
+    
+    heatmapvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+  })
+  
+  
+  
+  heatmaprandbutton <- reactiveValues(r1=NULL, r2=NULL)
+  
+  observeEvent(input$heatmaprandom, priority = 2, ignoreInit = T, {
+    
+    heatmaprandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    
+    heatmaprandbutton$r2 <- sample(1:length(varnames1.4$df), 1)
+    
+    
+    if("Main Var." %in% input$heatmaprand_choice) {heatmapvariables$var <- names(dataset())[[heatmaprandbutton$r1]]}
+    
+    if("Order Var." %in% input$heatmaprand_choice) {heatmapvariables$order <- varnames1.4$df[[heatmaprandbutton$r2]]}
+    
+  })
+  
+  
+  ##Data for Compliance boxplots
+  
+  heatmapdata <- reactiveValues(l=NULL, m=NULL)
+  
+  observeEvent(input$heatmap1, ignoreInit = T, {
+    
+    #Main heatmap
+    
+    heatmapdata$l <-   
+      
+      if(input$heatmaporder %in% "None"){
+        
+        dataset() %>% 
+          select_("ID", "timepoint", input$heatmapvar) %>%
+          group_by_("ID") %>%
+          summarise_all(countna) %>%
+          left_join(stratify_vars1.4$df2, by="ID")
+        
+      }
+    
+    else if (input$heatmaporder %in% "Compliance") {
       
       dataset() %>% 
-        select_(names(dataset())[[1]], names(dataset())[[input$table2_rows_selected]]) %>%
-        mutate_at(names(dataset())[1], funs(as.character)) %>%
-        group_by_(names(dataset())[1]) %>%
+        select_("ID", "timepoint", input$heatmapvar) %>%
+        group_by_("ID") %>%
         summarise_all(countna) %>%
-        left_join(stratify_vars$df2) %>%
-        arrange_(names(dataset())[input$table2_rows_selected])
+        left_join(stratify_vars1.4$df2, by="ID") %>%
+        arrange_(input$heatmapvar)
     }
     
     else {
       
       dataset() %>% 
-        select_(names(dataset())[[1]], names(dataset())[[input$table2_rows_selected]]) %>%
-        mutate_at(names(dataset())[1], funs(as.character)) %>%
-        group_by_(names(dataset())[1]) %>%
+        select_("ID", "timepoint", input$heatmapvar) %>%
+        group_by_("ID") %>%
         summarise_all(countna) %>%
-        left_join(stratify_vars$df2) %>%
-        arrange_(input$heatselect, names(dataset())[input$table2_rows_selected])
-    }
-  })
-  })
-  
-  ##Data for timeofday heatmap
-  heatdata <- reactive({withProgress(message = 'Loading Data for Heatmap 2', value = 0, {
-      dataset() %>% 
-      select_(names(dataset())[[1]], "timeofday", "weekday", names(dataset())[[input$table2_rows_selected]]) %>%
-      mutate_at(names(dataset())[1], funs(factor)) %>%
-      group_by_(names(dataset())[1], input$heatstrat) %>%
-      summarise_all(countna) %>%
-      left_join(select(stratify_vars$df2, -timeofday, -weekday), by=names(dataset())[1])
-  })
-  })
-  
-  
-  ##Code for main heatmap
-  output$freqheat_d <- renderPlotly({
-    
-    if(input$heatselect %in% c("None", "Compliance")) {
-      
-      ggplotly(ggplot(heatdata_d()) + 
-                 geom_tile(aes_string(y=names(heatdata_d())[1], x=factor("All"), fill=names(heatdata_d())[2])) +
-                 labs(y="", x="", title=names(heatdata_d())[2], fill="") +
-                 scale_fill_distiller(palette = "RdYlGn", direction = 1) +
-                 scale_y_discrete(limits=eval(parse(text=paste0("heatdata_d()$", names(heatdata_d())[1])))) +
-                 theme_bw() +
-                 theme(plot.margin = margin(t = 30, b = 10),
-                       axis.text.y = element_blank(),
-                       axis.ticks.x = element_blank(),
-                       axis.ticks.y = element_blank(),
-                       axis.title.y = element_blank(),
-                       legend.title = element_blank(),
-                       panel.border = element_blank(),
-                       panel.background = element_blank(),
-                       panel.grid = element_blank())
-      )
+        left_join(stratify_vars1.4$df2, by="ID") %>%
+        arrange_(varorder1.4$l, input$heatmapvar)
     }
     
-    else {
-      
-      ggplotly(ggplot(heatdata_d(), aes_string(label=input$heatselect)) + 
-                 geom_tile(aes_string(y=names(heatdata_d())[1], x=factor("All"), fill=names(heatdata_d())[2])) +
-                 labs(y="", x="", title=names(heatdata_d())[2], fill="") +
-                 scale_fill_distiller(palette = "RdYlGn", direction = 1) +
-                 scale_y_discrete(limits=eval(parse(text=paste0("heatdata_d()$", names(heatdata_d())[1])))) +
-                 theme_bw() +
-                 theme(plot.margin = margin(t = 30, b = 10),
-                       axis.text.y = element_blank(),
-                       axis.ticks.x = element_blank(),
-                       axis.ticks.y = element_blank(),
-                       axis.title.y = element_blank(),
-                       legend.title = element_blank(),
-                       panel.border = element_blank(),
-                       panel.background = element_blank(),
-                       panel.grid = element_blank())
-               
-      )
-    } 
+    #Time of day plot
     
+    heatmapdata$m <- 
+      
+      if (input$heatmapraw %in% "raw") {
+        
+        dataset() %>% 
+          select_("ID", "timeofday", "weekday", input$heatmapvar) %>%
+          group_by_("ID", input$heatmapstrat) %>%
+          summarise_all(countna) %>%
+          left_join(stratify_vars1.4$df2, by="ID")
+      }
+    
+    else if (input$heatmapraw %in% "subject normalized") {
+      
+      if (input$heatmapvar %in% "ID") {
+        
+        dataset() %>% 
+          select_("ID", "timeofday", "weekday", input$heatmapvar) %>%
+          group_by_("ID", input$heatmapstrat) %>%
+          summarise_all(countna) %>%
+          left_join(stratify_vars1.4$df2, by="ID")
+      }
+      
+      else {
+        
+        dataset() %>% 
+          select_("ID", "timeofday", "weekday", input$heatmapvar) %>%
+          group_by_("ID") %>%
+          mutate_at(input$heatmapvar, .funs = funs(normalize)) %>%
+          ungroup() %>%
+          group_by_("ID", input$heatmapstrat) %>%
+          summarise_all(countna) %>%
+          left_join(stratify_vars1.4$df2, by="ID")
+      }
+    }
+    
+  })
+  
+  
+  #dummy variable to control plot, since plot runs automatically when page is selected, will make it dependent on a reactive value that updates 
+  #once the "create plot" button is clicked.
+  
+  heatmap_dummy <- reactiveValues(l=0)
+  
+  observeEvent(input$heatmap1, ignoreInit = T, {
+    if (heatmap_dummy$l==0) {heatmap_dummy$l <- 1}
+    else NULL
+  })
+  
+  ##Reset plot when dataset changes
+  
+  observeEvent(input$go, {
+    heatmap_dummy$l <- 0
+    
+  })
+  
+  ##Instructions that appear before create plot button is clicked
+  
+  output$heatmap_instr <-  renderText(
+    if(heatmap_dummy$l==0) {"Click the [Create/Update Plot] button to generate plot!"}
+    else NULL 
+  )
+  
+  output$heatmap <- renderPlotly({
+    
+    input$heatmap1
+    
+    isolate(
+      
+      if(heatmap_dummy$l==0) NULL
+      
+      else {
+        
+        if (varorder1.4$l  %in% c("None", "Compliance")) {
+          
+          ggplotly(ggplot(heatmapdata$l) + 
+                     geom_tile(aes_string(y="ID", x=factor("All"), fill=input$heatmapvar)) +
+                     labs(y="", x="", title=input$heatmapvar, fill="") +
+                     scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                     scale_y_discrete(limits=eval(parse(text=paste0("heatmapdata$l$ID")))) +
+                     theme_bw() +
+                     theme(plot.margin = margin(t = 30, b = 10),
+                           axis.text.y = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           axis.ticks.y = element_blank(),
+                           axis.title.y = element_blank(),
+                           legend.title = element_blank(),
+                           panel.border = element_blank(),
+                           panel.background = element_blank(),
+                           panel.grid = element_blank())
+          )
+        }
+        
+        else {
+          
+          ggplotly(ggplot(heatmapdata$l, aes_string(label=varorder1.4$l)) + 
+                     geom_tile(aes_string(y="ID", x=factor("All"), fill=input$heatmapvar)) +
+                     labs(y="", x="", title=input$heatmapvar, fill="") +
+                     scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                     scale_y_discrete(limits=eval(parse(text=paste0("heatmapdata$l$ID")))) +
+                     theme_bw() +
+                     theme(plot.margin = margin(t = 30, b = 10),
+                           axis.text.y = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           axis.ticks.y = element_blank(),
+                           axis.title.y = element_blank(),
+                           legend.title = element_blank(),
+                           panel.border = element_blank(),
+                           panel.background = element_blank(),
+                           panel.grid = element_blank())
+                   
+          )
+        } 
+      }
+    )
   })
   
   
   ##Code for timeofday/weekday heatmap
-  output$freqheat <- renderPlotly({
+  output$heatmapTOD <- renderPlotly({
     
-    if (input$heatselect %in% c("None", "Compliance")) {  
-      
-      ggplotly(ggplot(heatdata()) + 
-                 geom_tile(aes_string(x=input$heatstrat, y=names(heatdata())[1], fill=names(heatdata())[4])) +
-                 labs(x="", y="Subject ID", title=paste0(names(heatdata())[4], " ", input$heatstrat), fill="") +
-                 scale_fill_distiller(palette = "RdYlGn", direction = 1) +
-                 scale_x_discrete(limits = levels(eval(parse(text=paste0("heatdata()$", input$heatstrat))))) +
-                 scale_y_discrete(limits=eval(parse(text=paste0("heatdata_d()$", names(heatdata_d())[1])))) +
-                 theme_bw() +
-                 theme(plot.margin = margin(t = 30, b = 10),
-                       axis.text.y = element_blank(),
-                       axis.ticks.x = element_blank(),
-                       axis.ticks.y = element_blank(),
-                       axis.title.y = element_blank(),
-                       legend.title = element_blank(),
-                       panel.border = element_blank(),
-                       panel.background = element_blank(),
-                       panel.grid = element_blank())
-                      
-      ) 
-    }
+    input$heatmap1
     
-    else {
+    isolate(
       
-      ggplotly(ggplot(heatdata(), aes_string(label=input$heatselect)) + 
-                 geom_tile(aes_string(x=input$heatstrat, y=names(heatdata())[1], fill=names(heatdata())[4])) +
-                 labs(x="", y="Subject ID", title=paste0(names(heatdata())[4], " ", input$heatstrat), fill="") +
-                 scale_fill_distiller(palette = "RdYlGn", direction = 1) +
-                 scale_x_discrete(limits = levels(eval(parse(text=paste0("heatdata()$", input$heatstrat))))) +
-                 scale_y_discrete(limits=eval(parse(text=paste0("heatdata_d()$", names(heatdata_d())[1])))) +
-                 theme_bw() +
-                 theme(plot.margin = margin(t = 30, b = 10),
-                       axis.text.y = element_blank(),
-                       axis.ticks.x = element_blank(),
-                       axis.ticks.y = element_blank(),
-                       axis.title.y = element_blank(),
-                       legend.title = element_blank(),
-                       panel.border = element_blank(),
-                       panel.background = element_blank(),
-                       panel.grid = element_blank())
-                      
-      ) 
-    }
+      if(heatmap_dummy$l==0) NULL
+      
+      else {
+        
+        if (varorder1.4$l  %in% c("None", "Compliance")) {
+          
+          ggplotly(ggplot(heatmapdata$m) + 
+                     geom_tile(aes_string(x=input$heatmapstrat, y="ID", fill=input$heatmapvar)) +
+                     labs(x="", y="Subject ID", title=paste0(input$heatmapvar, " ", input$heatmapstrat), fill="") +
+                     scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                     scale_x_discrete(limits = levels(eval(parse(text=paste0("heatmapdata$m$", input$heatmapstrat))))) +
+                     scale_y_discrete(limits=eval(parse(text=paste0("heatmapdata$m$ID")))) +
+                     theme_bw() +
+                     theme(plot.margin = margin(t = 30, b = 10),
+                           axis.text.y = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           axis.ticks.y = element_blank(),
+                           axis.title.y = element_blank(),
+                           legend.title = element_blank(),
+                           panel.border = element_blank(),
+                           panel.background = element_blank(),
+                           panel.grid = element_blank())
+                   
+          ) 
+        }
+        
+        else {
+          
+          ggplotly(ggplot(heatmapdata$m, aes_string(label=varorder1.4$l)) + 
+                     geom_tile(aes_string(x=input$heatmapstrat, y="ID", fill=input$heatmapvar)) +
+                     labs(x="", y="Subject ID", title=paste0(input$heatmapvar, " ", input$heatmapstrat), fill="") +
+                     scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+                     scale_x_discrete(limits = levels(eval(parse(text=paste0("heatmapdata$m$", input$heatmapstrat))))) +
+                     scale_y_discrete(limits=eval(parse(text=paste0("heatmapdata$m$ID")))) +
+                     theme_bw() +
+                     theme(plot.margin = margin(t = 30, b = 10),
+                           axis.text.y = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           axis.ticks.y = element_blank(),
+                           axis.title.y = element_blank(),
+                           legend.title = element_blank(),
+                           panel.border = element_blank(),
+                           panel.background = element_blank(),
+                           panel.grid = element_blank())
+          )
+        }
+      }
+    )
   })
-  
-  
-  ##Codebook
   
 
   #Responses Page 1, histogram of responses and missing, codebook--------------------------------------------------------------------------------
