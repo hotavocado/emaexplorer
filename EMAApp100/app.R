@@ -342,24 +342,41 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                          
                                          conditionalPanel(condition = "input.conditionedPanels2 == 'Response Scatterplot'",
                                                           
-                                                          h4("Scatterplot Options:"),
+                                                          h4("Main Variables Options"),
                                                           
-                                                          uiOutput("scattery"),
+                                                          uiOutput("scatterplot_y_var"),
                                                           
-                                                          uiOutput("scatterstrat"),
+                                                          uiOutput("scatterplot_x_var"),
                                                           
-                                                          h4("For Stratifying Variable:"),
+                                                          uiOutput("scatterplotraw"),
                                                           
-                                                          radioButtons("scatterradio", "Quantiles:",
+                                                          radioButtons("scatterplotlevel", "Main Variables Level:", c("Subject", "Day", "Assessment"), selected = "Subject", inline = T),
+                                                          
+                                                          hr(),
+                                                          
+                                                          h4("Color Variable Options"),
+                                                          
+                                                          uiOutput("scatterplotcolor"),
+                                                          
+                                                          radioButtons("scatterplotcolortype", 
+                                                                       label = "Color Variable Type:", 
+                                                                       choices = c("Raw", "Subject Normalized"),
+                                                                       selected = "Raw", inline = T),
+                                                          
+                                                          uiOutput("scatterplotcolorlevel"),
+                                                          
+                                                          
+                                                          radioButtons("scatterplotradio", "Quantiles:",
                                                                        c("Auto", "On", "Off"), inline = T),
                                                           
-                                                          sliderInput("scatterntile", "Number of Quantiles:",
+                                                          sliderInput("scatterplotntile", "Number of Quantiles:",
                                                                       min = 2, max = 10,
                                                                       value = 4, step = 1),
                                                           
-                                                          actionButton("scatter1", "Update Plot")
-                                                          
-                      
+                                                          hr(),
+                                        
+                                                          actionButton("scatterplot1", "Create/Update Plot")
+                                                      
                                                           
                                                           )
                                                           
@@ -478,7 +495,12 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                      
                                                      column(8,
                                                             div(style = "height:10px"),
-                                                            plotlyOutput("scatterR", height = 500),
+                                                            div(style="display: inline-block;vertical-align:top; width: 300px;", checkboxGroupInput("scatterplotrand_choice", label = "Choose Random Inputs:", choices = c("Y-Axis Var.", "X-Axis Var.", "Color Var."), selected = c("Y-Axis Var.", "X-Axis Var.", "Color Var."),
+                                                                                                                                                    inline = T, width = 300)), 
+                                                                
+                                                            div(style="display: inline-block;vertical-align:top; width: 200px;", actionButton("scatterplotrandom", "Random Vars")),
+                                                            verbatimTextOutput("scatterplot_instr"),
+                                                            plotlyOutput("scatterplot", height = 500),
                                                             div(style = "height:25px"))
                                                    )
                                           )
@@ -538,7 +560,7 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                  h4('Main Variable Options'),
                                                  
                                                  uiOutput("subbrowsevar"),
-                                                 
+                                                
                                                  radioButtons("subbrowseraw", 
                                                               label = "Main Variable Type:", 
                                                               choices = c("Raw", "Subject Normalized"),
@@ -2761,110 +2783,365 @@ server <- function(input, output){
                                            "}")
                                        ))), callback = JS('table.page(3).draw(false);'))
   
+  ##Select y axis variable:
+  output$scatterplot_y_var <- renderUI({selectInput('scatterplot_y_var', 'Y-Axis Variable:', c(names(dataset())), selected = scatterplotvariables$y_var, selectize=TRUE)})
   
-  ##stratify dataset add _s to variable names so strat variable can be the same as either plotting variable
-  observeEvent(input$conditionedPanels2, {
-    if(input$conditionedPanels2 == 'Response Scatterplot'){
-    stratify_vars$df2 <- stratify_vars$df %>% rename_at(vars(names(stratify_vars$df)[2:ncol(stratify_vars$df)]), ~ paste0(names(stratify_vars$df)[2:ncol(stratify_vars$df)], "_s"))
-    varnames$l <- names(stratify_vars$df2)}
-    })
+  ##Select x axis variable
+  output$scatterplot_x_var <- renderUI({selectInput('scatterplot_x_var', 'X-Axis Variable:', c(names(dataset())), selected = scatterplotvariables$x_var, selectize=TRUE)})
   
+  ##Color/interaction datasets
+  stratify_vars2.5 <- reactiveValues(df = NULL, df2 = NULL)
   
-  ##stratify select for scatterplot, varnames$l used so updating stratify_vars$df2 doesn't refresh scatterstrat
-  output$scatterstrat <- renderUI({selectInput('scatterstrat', 'Stratify by:', c("None",  varnames$l), selectize=TRUE)})
+  ##Using varnames so updating stratify_vars2.5$df2 doesn't refresh subbrowsecolor
+  varnames2.5 <- reactiveValues(df=NULL)
   
-  ##y-axis variable for scatterplot, variable selected will automatically update to variable selectd in table until user changes y-axis manually
-  scatter_y <- reactiveValues(l=NULL)
-  
-  observeEvent(input$table7_rows_selected, {
+  ##Default datasets for color/interaction
+  observeEvent(input$go, priority = -1, {
     
-    if(is.null(scatter_y$l)) {scatter_y$l <- names(dataset())[[input$table7_rows_selected]]}
-                              
+    stratify_vars2.5$df <- stratify_vars$df_full %>% select_("ID", "timeindex") %>% mutate(dummy_s = 1)
+    stratify_vars2.5$df2 <- stratify_vars$df_full %>% select_("ID", "timeindex") %>% mutate(dummy_s = 1)
     
-    else if(scatter_y$l %in% input$scattery) {scatter_y$l <- names(dataset())[[input$table7_rows_selected]]}
+    varnames2.5$df <- names(stratify_vars$df_full)
     
-  
-    })
-  
-  output$scattery <- renderUI({selectInput('scattery', 'Y-Axis:', names(stratify_vars$df), selected = scatter_y$l, selectize=TRUE)})
-  
-  ##Stratify vars dataset, upon action button, the stratifying variable in stratify_vars$df2 will update based on quantile selection
-  observeEvent(input$scatter1, {
-    stratify_vars$df2 <-  
-      if (!input$scatterstrat %in% "None"){
-        if(input$scatterradio %in% "Auto"){
-          stratify_vars$df %>% rename_at(vars(names(stratify_vars$df)[2:ncol(stratify_vars$df)]), ~ paste0(names(stratify_vars$df)[2:ncol(stratify_vars$df)], "_s")) %>%
-            mutate_at(input$scatterstrat, function (x) { if (class(x) %in% "character") {x}
-              else if (class(x) %in% c("numeric", "integer") & length(unique(x)) > 20) {my_ntiles(x , input$scatterntile) }
-              else if (class(x) %in% c("numeric", "integer") & length(unique(x)) <= 20) {factor(x)}
-              else {x=NA}
-            }
-            )
-        }
-        
-        else if (input$scatterradio %in% "On"){
-          stratify_vars$df %>% rename_at(vars(names(stratify_vars$df)[2:ncol(stratify_vars$df)]), ~ paste0(names(stratify_vars$df)[2:ncol(stratify_vars$df)], "_s")) %>%
-            mutate_at(input$scatterstrat, ~my_ntiles(.x, input$scatterntile))
-          
-        }
-        
-        else if (input$scatterradio %in% "Off"){stratify_vars$df %>% rename_at(vars(names(stratify_vars$df)[2:ncol(stratify_vars$df)]), ~ paste0(names(stratify_vars$df)[2:ncol(stratify_vars$df)], "_s"))}
-      }
-    
-    else {stratify_vars$df2}
   })
   
-  ###varcolor$l is used so selecting stratify input doesn't automatically update plot
-  varcolor2.5 <- reactiveValues(l="None")
   
-  observeEvent(input$scatter1, {varcolor2.5$l <- input$scatterstrat})
+  ##create main dataset with the appropriate level
+  dataset_levels2.5 <- reactiveValues(df = NULL)
   
-  
-  ##Data for scatterplot
-  
-  ###rownum$l is used to give plot a default x value, plot updates as user selects another x variable by clicking table
-  ###row_last_clicked is used instead of rows_selected so reclicking variable and deselecting doesn't remove the plot
-  row_num <- reactiveValues(l=8)
-  observeEvent(input$table7_row_last_clicked, {row_num$l <- input$table7_row_last_clicked})
-  
-  
-  scatterdata <- reactive({withProgress(message = 'Loading Data for Scatterplot', {
-    dataset() %>% 
-      select_(names(dataset())[1], names(dataset())[[row_num$l]], input$scattery) %>%
-      mutate_at(names(dataset())[1], funs(factor)) %>%
-      group_by_(names(dataset())[1]) %>%
-      summarise_all(mymean) %>%
-      left_join(stratify_vars$df2, by="ID")
-  })
-  })
-  
-
-  ##Code for scatterplot
-  
-  output$scatterR <- renderPlotly({
+  observeEvent({input$scatterplot1}, priority = 1, ignoreInit = T,  {
     
-    if (varcolor2.5$l %in% "None") {
+    if (input$scatterplotlevel %in% "Subject") {
       
-      ggplotly(ggplot(scatterdata(), aes_string(x=names(scatterdata())[2], y=input$scattery, label = names(scatterdata())[1])) +
-                 geom_point() +
-                 geom_smooth(method='lm',formula=y~x)+
-                 theme_bw(),  height=800, width=1000) 
+      dataset_levels2.5$df <- dataset() %>% 
+        select_("ID", input$scatterplot_y_var, input$scatterplot_x_var) %>% mutate(dummy=1) %>%
+        group_by(ID) %>%
+        summarise_all(function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+        return(y)}) %>% 
+        ungroup()
+      
+      
+    }
+    
+    
+    else if (input$scatterplotlevel %in% "Day") {
+      
+      dataset_levels2.5$df <- dataset() %>% 
+        select_("ID", "day", input$scatterplot_y_var, input$scatterplot_x_var) %>% mutate(dummy=1) %>%
+        group_by(ID, day) %>%
+        summarise_all(function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+        return(y)}) %>% 
+        ungroup()
+      
+      
+    }
+    
+    else if (input$subbrowselevel %in% "Assessment") {
+      
+      dataset_levels2.5$df <- dataset() %>% select_("ID", "timeindex", "day", input$scatterplot_y_var, input$scatterplot_x_var) %>% mutate(dummy=1)
+    }
+  })
+  
+  
+  ##Level select for color variable, choices depend on level of main dataset
+  
+  output$scatterplotcolorlevel <- renderUI({
+    
+    if (input$scatterplotlevel %in% "Assessment") {
+      radioButtons("scatterplotcolorlevel", "Color Variable Level:", c("Subject", "Day", "Assessment"), selected = "Subject", inline = T)
+    }
+    
+    else if (input$scatterplotlevel %in% "Day") {
+      radioButtons("scatterplotcolorlevel", "Color Variable Level:", c("Subject", "Day"), selected = "Subject", inline = T)
+    }
+    
+    else if (input$scatterplotlevel %in% "Subject") {
+      radioButtons("scatterplotcolorlevel", "Color Variable Level:", c("Subject"), selected = "Subject", inline = T)
+    }
+    
+  })
+  
+  ##Data type select
+  
+  
+  output$scatterplotraw <- renderUI({
+    
+    if (input$scatterplotlevel %in% "Subject") {
+      radioButtons("scatterplotraw", 
+                   label = "Main Variables Type:", 
+                   choices = c("Raw"),
+                   selected = "Raw", inline = T)
+    }
+    
+    else {
+      radioButtons("scatterplotraw", 
+                   label = "Main Variables Type:", 
+                   choices = c("Raw", "Subject Normalized"),
+                   selected = "Subject Normalized", inline = T)
+      
+    }
+    
+  })
+  
+  
+  ##Key variable for each combination of raw/normalized and assessment/day/subject for coloring variable
+  colorvarkey2.5 <- reactive({paste0(input$scatterplotcolortype, "-", input$scatterplotcolorlevel)})
+  
+  ##create the appropriate stratify_vars2.5$df , default color/interaction dataset
+  observeEvent({input$scatterplot1}, priority = 1, ignoreInit = T, {
+    
+    if(!input$scatterplotcolor %in% c("ID", "None")) {
+      
+      if (colorvarkey2.5() %in% "Raw-Subject") {
+        stratify_vars2.5$df <- stratify_vars$df_full %>%
+          group_by(ID) %>%
+          summarise_at(input$scatterplotcolor, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                         ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+          return(y)}) %>% 
+          ungroup()
+        
+      }
+      
+      else if (colorvarkey2.5() %in% "Raw-Day") {
+        stratify_vars2.5$df <- stratify_vars$df_full %>%
+          group_by(ID, day) %>%
+          summarise_at(input$scatterplotcolor, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                         ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+          return(y)}) %>% 
+          ungroup() 
+        
+      }
+      
+      else if (colorvarkey2.5() %in% "Raw-Assessment") {
+        stratify_vars2.5$df <- stratify_vars$df_full %>% select_("ID", "timeindex", input$scatterplotcolor)
+      }
+      
+      else if (colorvarkey2.5() %in% "Subject Normalized-Subject") {
+        stratify_vars2.5$df <-  stratify_vars$df_full %>%
+          group_by(ID) %>%
+          summarise_at(input$scatterplotcolor, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                         ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+          return(y)}) %>% 
+          ungroup() 
+        
+      }
+      
+      else if (colorvarkey2.5() %in% "Subject Normalized-Day") {
+        stratify_vars2.5$df <- stratify_vars$df_full %>%
+          group_by(ID, day) %>%
+          summarise_at(input$scatterplotcolor, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                         ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+          return(y)}) %>% 
+          ungroup() %>% group_by(ID) %>%
+          mutate_at(input$scatterplotcolor, funs(normalize)) %>%
+          ungroup()
+      }
+      
+      else if (colorvarkey2.5() %in% "Subject Normalized-Assessment") {
+        stratify_vars2.5$df <- stratify_vars$df_full %>% select_("ID", "timeindex", input$scatterplotcolor) %>%
+          group_by(ID) %>%
+          mutate_at(input$scatterplotcolor, funs(normalize)) %>%
+          ungroup()
+      }
       
     }
     
     else {
       
-      ggplotly(ggplot(scatterdata(), aes_string(x=names(scatterdata())[2], y=input$scattery, label = names(scatterdata())[1], color = varcolor2.5$l)) +
-                 geom_point() +
-                 geom_smooth(method='lm',formula=y~x)+
-                 theme_bw(), height=800, width=1000)
+      if (colorvarkey2.5() %in% c("Raw-Assessment", "Subject Normalized-Assessment")) {
+        
+        stratify_vars2.5$df <- stratify_vars$df_full %>% select_("ID", "timeindex") %>% mutate(dummy_s=1)}
       
+      else if (colorvarkey2.5() %in% c("Raw-Day", "Subject Normalized-Day")) {
+        
+        stratify_vars2.5$df <- stratify_vars$df_full %>% mutate(dummy=1) %>% group_by(ID, day) %>% summarise(dummy_s=mean(dummy))}
+      
+      else if (colorvarkey2.5() %in% c("Raw-Subject", "Subject Normalized-Subject")) {
+        
+        stratify_vars2.5$df <- stratify_vars$df_full %>% mutate(dummy=1) %>% group_by(ID) %>% summarise(dummy_s=mean(dummy))}
+      
+    }
+    
+  })
+  
+  ##Select coloring variable
+  output$scatterplotcolor <- renderUI({selectInput('scatterplotcolor', 'Color By:', c("None", varnames2.5$df), selected=scatterplotvariables$color, selectize=TRUE)})
+  
+  ###varcolor2.5$l is used so selecting color input doesn't automatically update plot
+  varcolor2.5 <- reactiveValues(l="None")
+  
+  observeEvent({input$scatterplotcolor}, ignoreInit = T, { if(input$scatterplotcolor %in% c("ID", "None")) {varcolor2.5$l <- input$scatterplotcolor}
+    else {varcolor2.5$l <- paste0(input$scatterplotcolor, "_s")} 
+  })
+  
+  ##Color variable dataset join vars, depending on level and type
+  df2_join_vars2.5 <- reactive({ if (input$scatterplotcolorlevel %in% "Subject") {c("ID")}
+    else if (input$scatterplotcolorlevel %in% "Day") {c("ID", "day")}
+    else if (input$scatterplotcolorlevel %in% "Assessment") {c("ID", "timeindex")}
+  })
+  
+  
+  ##Color vars dataset, upon action button, stratify_vars2.5$df2 will update based on variable and quantile selection
+  
+  observeEvent(input$scatterplot1, priority = 1, ignoreInit = T, {
+    
+    stratify_vars2.5$df2 <-  
+      
+      if(input$scatterplotcolor %in% c("ID", "None")) {stratify_vars2.5$df}
+    
+    else {
+      if(input$scatterplotradio %in% "Auto"){
+        stratify_vars2.5$df %>% select_(df2_join_vars2.5()[1], df2_join_vars2.5()[length(df2_join_vars2.5())], input$scatterplotcolor) %>%
+          mutate_at(input$scatterplotcolor, function (x) { if (is.character(x) | is.factor(x)) {x}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) > 20) {my_ntiles(x, input$scatterplotntile)}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) <= 20) {factor(x, ordered = T, exclude = c(NA, "NaN"))}
+            else {x=NA}
+          }) %>% 
+          rename_at(vars(input$scatterplotcolor), ~ paste0(input$scatterplotcolor, "_s"))
+      }
+      
+      else if (input$scatterplotradio %in% "On"){
+        stratify_vars2.5$df %>% select_(df2_join_vars2.5()[1], df2_join_vars2.5()[length(df2_join_vars2.5())], input$scatterplotcolor) %>%
+          mutate_at(input$scatterplotcolor, ~my_ntiles(.x, input$scatterplotntile)) %>%
+          rename_at(vars(input$scatterplotcolor), ~ paste0(input$scatterplotcolor, "_s"))
+        
+      }
+      
+      else if (input$scatterplotradio %in% "Off"){
+        stratify_vars2.5$df %>% 
+          select_(df2_join_vars2.5()[1], df2_join_vars2.5()[length(df2_join_vars2.5())], input$scatterplotcolor) %>%
+          rename_at(vars(input$scatterplotcolor), ~ paste0(input$scatterplotcolor, "_s"))
+        
+      }
     }
     
     
   })
   
-
+  #Random plot
+  
+  #make plot update after new variables are selected
+  
+  scatterplotvariables <- reactiveValues(x_var = "ID", y_var = "ID", color = "None")
+  
+  #default scatterplot vars
+  observeEvent(input$go, priority = -1, {
+    
+    scatterplotvariables$x_var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+    scatterplotvariables$y_var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+  })
+  
+  scatterplotrandbutton <- reactiveValues(r1=NULL, r2=NULL, r3=NULL)
+  
+  observeEvent(input$scatterplotrandom, priority = 2, ignoreInit = T, {
+    
+    scatterplotrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    
+    scatterplotrandbutton$r2 <- sample(1:length(names(dataset())), 1)
+    
+    scatterplotrandbutton$r3 <- sample(1:length(varnames2.5$df), 1)
+    
+    
+    if("X-Axis Var." %in% input$scatterplotrand_choice) {scatterplotvariables$x_var <- names(dataset())[[scatterplotrandbutton$r1]]}
+    
+    if("Y-Axis Var." %in% input$scatterplotrand_choice) {scatterplotvariables$y_var <- varnames2.5$df[[scatterplotrandbutton$r2]]}
+    
+    if ("Color Var." %in% input$scatterplotrand_choice) {scatterplotvariables$color <- varnames2.5$df[[scatterplotrandbutton$r3]]}
+    
+    
+  })
+  
+  ##datasets for scatterplot
+  
+  scatterplotdata <- reactiveValues(l=NULL)
+  
+  observeEvent(input$scatterplot1, ignoreInit = T, {
+    
+    scatterplotdata$l <- 
+      
+      if (input$scatterplotraw %in% "Raw" | input$scatterplot_y_var %in% "ID" | input$scatterplot_x_var %in% "ID" ) {
+        
+        dataset_levels2.5$df %>% 
+          left_join(stratify_vars2.5$df2, by=c(df2_join_vars2.5()))
+      }
+    
+    else if (input$scatterplotraw %in% "Subject Normalized") {
+      
+      dataset_levels2.5$df %>% 
+        group_by_("ID") %>%
+        mutate_at(c(input$scatterplot_x_var, input$scatterplot_y_var), funs(normalize)) %>%
+        ungroup() %>%
+        left_join(stratify_vars2.5$df2, by=c(df2_join_vars2.5())) 
+      
+    }
+    
+  })
+  
+  
+  #dummy variable to control plot, since plot runs automatically when page is selected, will make it dependent on a reactive value that updates 
+  #once the "create plot" button is clicked.
+  
+  scatterplot_dummy <- reactiveValues(l=0)
+  
+  observeEvent(input$scatterplot1, priority = 0, ignoreInit = T, {
+    if (scatterplot_dummy$l==0) {scatterplot_dummy$l <- 1}
+    else NULL
+  })
+  
+  
+  ##Reset plot when dataset changes
+  
+  observeEvent(input$go, {
+    scatterplot_dummy$l <- 0
+    
+  })
+  
+  
+  
+  ##Instructions that appear before create plot button is clicked
+  
+  output$scatterplot_instr <-  renderText(
+    if(scatterplot_dummy$l==0) {"Click the [Create/Update Plot] button to generate plot!"}
+    else NULL 
+  )
+  
+  
+  ##Scatterplot 
+  
+  output$scatterplot <- renderPlotly({
+    
+    input$scatterplot1
+    
+    isolate(
+      
+      if(scatterplot_dummy$l==0) NULL
+      
+      else{
+        
+        if (varcolor2.5$l %in% "None") {
+          
+          ggplotly(ggplot(scatterplotdata$l, aes_string(x=input$scatterplot_x_var, y=input$scatterplot_y_var, label = "ID")) +
+                     geom_point() +
+                     geom_smooth(method='lm', formula=y~x)+
+                     theme_bw(),  height=800, width=1000) 
+          
+        }
+        
+        else {
+          
+          ggplotly(ggplot(scatterplotdata$l, aes_string(x=input$scatterplot_x_var, y=input$scatterplot_y_var, label = "ID", color = varcolor2.5$l)) +
+                     geom_point() +
+                     geom_smooth(method='lm', formula=y~x)+
+                     theme_bw(), height=800, width=1000)
+          
+        }
+      }
+    )
+  })
 
   #Subject Dashboard Page 1: Mean Trajetory Browse------------------------------------------------------------------------------------------------------------------------------
 
@@ -3043,6 +3320,13 @@ server <- function(input, output){
   
   
   meanbrowsevariables <- reactiveValues(var = "ID", color = "ID", order = "ID")
+  
+  #Default random var
+  observeEvent(input$go, priority = -1, {
+    
+    meanbrowsevariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+  })
   
   meanbrowserandbutton <- reactiveValues(r1=NULL, r2=NULL, r3=NULL)
   
@@ -3232,6 +3516,20 @@ server <- function(input, output){
     
   })
   
+  ##Data type select for main variable, choices depend on the level of main dataset:
+  
+  output$subbrowsecolorlevel <- renderUI({
+    
+    if (input$subbrowselevel %in% "Assessment") {
+      radioButtons("subbrowsecolorlevel", "Color Variable Level:", c("Subject", "Day", "Assessment"), selected = "Assessment", inline = T)
+    }
+    
+    else if (input$subbrowselevel %in% "Day") {
+      radioButtons("subbrowsecolorlevel", "Color Variable Level:", c("Subject", "Day"), selected = "Day", inline = T)
+    }
+    
+  })
+  
   
   
   ##Key variable for each combination of raw/normalized and assessment/day/suject for coloring variable
@@ -3316,7 +3614,7 @@ server <- function(input, output){
   
   
   ##Select coloring variable (subject level, can bin into quantiles)
-  output$subbrowsecolor <- renderUI({selectInput('subbrowsecolor', 'Color By:', varnames3.2$df, selected=subbrowsevariables$color, selectize=TRUE)})
+  output$subbrowsecolor <- renderUI({selectInput('subbrowsecolor', 'Color By:', varnames3.2$df[!varnames3.2$df %in% "timeindex"], selected=subbrowsevariables$color, selectize=TRUE)})
   
   ###varcolor3.2$l is used so selecting color input doesn't automatically update plot
   varcolor3.2 <- reactiveValues(l="weekday")
@@ -3467,6 +3765,13 @@ server <- function(input, output){
 
   subbrowsevariables <- reactiveValues(var = "ID", color = "weekday", order = "ID")
   
+  #Random defaults
+  observeEvent(input$go, priority = -1, {
+    
+    subbrowsevariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+  })
+  
   subbrowserandbutton <- reactiveValues(r1=NULL, r2=NULL, r3=NULL)
   
   observeEvent(input$subbrowserandom, priority = 2, ignoreInit = T, {
@@ -3533,8 +3838,6 @@ server <- function(input, output){
     })
   
 
-  
-  
   ##Reset plot when dataset changes
   
   observeEvent(input$go, {
