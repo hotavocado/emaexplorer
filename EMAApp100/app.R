@@ -270,12 +270,35 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                          
                                          conditionalPanel(condition = "input.conditionedPanels2 == 'Response Histogram'",
                                                           
-                                                          h4('Histogram Options:'), 
+                                                          h4('Main Variable Options'),
                                                           
-                                                          selectInput("histstrat", 
-                                                                      label = "Stratify by:", 
-                                                                      choices = list("None"= 1, "Time of day" = 2), 
-                                                                      selected = 2)
+                                                          uiOutput("rhistvar"),
+                                                          
+                                                          hr(),
+                                                          
+                                                          h4('Color Variable Options'), 
+                                                          
+                                                          uiOutput("rhistcolor"),
+                                                          
+                                                          radioButtons("rhistradio", "Quantiles:",
+                                                                       c("Auto", "On", "Off"), inline = T),
+                                                          
+                                                          sliderInput("rhistntile", "Number of Quantiles:",
+                                                                      min = 2, max = 10,
+                                                                      value = 4, step = 1),
+                                                          hr(),
+                                                          
+                                                          h4('Random Variable Options'),
+                                                          
+                                                          checkboxGroupInput("rhistrand_choice", label = "Choose Random Inputs:", choices = c("Main Var.", "Color Var."), selected = c("Main Var.", "Color Var."),
+                                                                             inline = T, width = 300), 
+                                                          actionButton("rhistrandom", "Random Vars"),
+                                                          
+                                                          hr(),
+                                                          
+                                                          actionButton("rhist1", "Create/Update Plot")
+                                                          
+                                                      
                                          ),
                                          
                                          conditionalPanel(condition = "input.conditionedPanels2 == 'Response Boxplot'",
@@ -440,8 +463,11 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                      
                                                      column(1),
                                                      column(8,
-                                                            div(plotlyOutput("histR"), style = "height:400px"),
-                                                            div(plotlyOutput("histmissR"), style = "height:180px"))
+                                                            div(style = "height:10px"),
+                                                            verbatimTextOutput("rhist_instr"),
+                                                            div(plotlyOutput("histR", height = 500)),
+                                                            div(style = "height:10px"),
+                                                            div(plotlyOutput("missinghistR", height = 200)))
                                                      
                                                
                                                      
@@ -873,6 +899,7 @@ server <- function(input, output){
   my_ntiles <- function (x, n = 3, digits = 3) 
     
   {
+    x <- as.numeric(x)
     xrank <- rank(x, na.last = TRUE, ties.method = "first")
     xrank[is.na(x)] <- NA
     size <- max(xrank, na.rm = TRUE)
@@ -1986,8 +2013,9 @@ server <- function(input, output){
   })
   
 
-  #Responses Page 1, histogram of responses and missing, codebook--------------------------------------------------------------------------------
+#Responses Page 1, histogram of responses and missing, codebook--------------------------------------------------------------------------------
   
+
   ##datatable for histogram
   output$table3 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
                                        options = list(columnDefs = list(list(
@@ -1999,105 +2027,286 @@ server <- function(input, output){
                                            "}")
                                        ))), callback = JS('table.page(3).draw(false);'))
   
+  
+  
+  
+  #Select main variable
+  output$rhistvar <- renderUI({selectInput('rhistvar', 'Main Variable:', c(names(dataset())), selected = rhistvariables$var, selectize=TRUE)})
+  
+  
+  #Select coloring variable
+  output$rhistcolor <- renderUI({selectInput('rhistcolor', 'Color By:', c("None", varnames2.1$df), selected = rhistvariables$color, selectize=TRUE)})
+  
+  
+  #hist color variable
+  varcolor2.1 <- reactiveValues(l="ID")
+  
+  observeEvent(input$rhist1, {if (input$rhistcolor %in% c("ID", "None")) {varcolor2.1$l <- input$rhistcolor}
+    else {varcolor2.1$l <- paste0(input$rhistcolor, "_s")} 
+  })
+  
+  # output$boxselectR <- renderUI({selectInput('boxselectR', 'Stratify by:', c("None", varnames$l), selectize=TRUE)})
+  
+  
+  ##Use varnames so updating stratify_vars3.1$df2 doesn't refresh subbrowsecolor
+  varnames2.1 <- reactiveValues(df=NULL)
+  
+  
+  ##Color datasets
+  stratify_vars2.1 <- reactiveValues(df = NULL, df2 = NULL)
+  
+  ##Default datasets
+  observeEvent(input$go, priority = -1, {
+    
+    stratify_vars2.1$df <- stratify_vars$df_full %>% select("ID", "timepoint") %>% mutate(dummy_s=1)
+    stratify_vars2.1$df2 <- stratify_vars2.1$df
+    
+    varnames2.1$df <- names(stratify_vars$df_full)
+    
+    
+  })
+  
+  
+  ##create the appropriate stratify_vars2.1$df 
+  observeEvent(input$rhist1, {
+    
+    if(!input$rhistcolor %in% c("ID", "None")) {
+      stratify_vars2.1$df <- stratify_vars$df_full %>% select_("ID", "timepoint", input$rhistcolor)
+      
+    }
+    
+    else {stratify_vars2.1$df <- stratify_vars$df_full %>% select_("ID", "timepoint") %>% mutate(dummy_s = 1)}
+    
+  })
+  
+  ##Color vars dataset, upon action button, stratify_vars2.1$df2 will update based on variable and quantile selection
+  
+  observeEvent(input$rhist1, ignoreInit = T, {
+    
+    stratify_vars2.1$df2 <-  
+      
+      
+      if(input$rhistcolor %in% c("ID", "None")) {stratify_vars2.1$df}
+    
+    else {
+      if(input$rhistradio %in% "Auto"){
+        stratify_vars2.1$df %>% 
+          mutate_at(input$rhistcolor, function (x) { if (is.character(x) | is.factor(x)) {x}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) > 20) {as.character(my_ntiles(x, input$rhistntile))}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) <= 20) {as.character(factor(x, ordered = T, exclude = c(NA, "NaN")))}
+            else {x=NA}
+          }) %>% 
+          rename_at(vars(input$rhistcolor), ~ paste0(input$rhistcolor, "_s"))
+      }
+      
+      
+  
+      else if (input$rhistradio %in% "On"){
+        stratify_vars2.1$df %>% 
+          mutate_at(input$rhistcolor, ~my_ntiles(.x, input$rhistntile)) %>%
+          rename_at(vars(input$rhistcolor), ~ paste0(input$rhistcolor, "_s"))
+        
+      }
+      
+      else if (input$rhistradio %in% "Off"){
+        stratify_vars2.1$df %>% 
+          mutate_at(input$rhistcolor, as.character) %>%
+          rename_at(vars(input$rhistcolor), ~ paste0(input$rhistcolor, "_s"))
+        
+      }
+    }
+    
+  })
+  
+  
+  
+  #Random plot
+  
+  #make plot update after new variables are selected
+  
+  rhistvariables <- reactiveValues(var = "ID", color = "None")
+  
+  
+  #Default hist variable
+  observeEvent(input$go, priority = -1, {
+    
+    rhistvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+  })
+  
+  rhistrandbutton <- reactiveValues(r1=NULL)
+  
+  observeEvent(input$rhistrandom, priority = 2, ignoreInit = T, {
+    
+    rhistrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    
+    rhistrandbutton$r2 <- sample(1:length(varnames2.2$df), 1)
+    
+    
+    if("Main Var." %in% input$rhistrand_choice) {rhistvariables$var <- names(dataset())[[rhistrandbutton$r1]]}
+    
+    if("Color Var." %in% input$rhistrand_choice) {rhistvariables$color <- varnames2.1$df[[rhistrandbutton$r2]]}
+    
+  })
+  
+  
+  ##Data for response hists
+  
+  rhistdata <- reactiveValues(l=NULL, m=NULL)
+  
+  
+  missinghist <- function(x) {ifelse(is.na(x), 1, NA)}
+  
+  observeEvent(input$rhist1, ignoreInit = T, {
+    
+    var <- 
+    
+    rhistdata$l <- 
+      dataset() %>% 
+      select_("ID", "timepoint", input$rhistvar) %>%
+      mutate_at(input$rhistvar, as.factor) %>%
+      left_join(stratify_vars2.1$df2) %>%
+      filter(!is.na((!!sym(input$rhistvar)))) 
+    
+    
+    rhistdata$m <-
+      dataset() %>% 
+      select_("ID", "timepoint", input$rhistvar) %>%
+      mutate_at(input$rhistvar, as.factor) %>%
+      left_join(stratify_vars2.1$df2) %>% 
+      mutate_at(input$rhistvar, funs(na=missinghist)) %>%
+      filter(!is.na(na))
+    
+    
+  })
+  
+  #output$test1 <- renderText(names(rhistdata$m))
+  
+  
+  #dummy variable to control plot, since plot runs automatically when page is selected, will make it dependent on a reactive value that updates 
+  #once the "create plot" button is clicked.
+  
+  rhist_dummy <- reactiveValues(l=0)
+  
+  observeEvent(input$rhist1, ignoreInit = T, {
+    if (rhist_dummy$l==0) {rhist_dummy$l <- 1}
+    else NULL
+  })
+  
+  ##Reset plot when dataset changes
+  
+  observeEvent(input$go, {
+    rhist_dummy$l <- 0
+    
+  })
+  
+  ##Instructions that appear before create plot button is clicked
+  
+  output$rhist_instr <-  renderText(
+    if(rhist_dummy$l==0) {"Click the [Create/Update Plot] button to generate plot!"}
+    else NULL 
+  )
+  
   ##code for histogram
   
   output$histR <- renderPlotly({ 
-  
-    if(input$histstrat==2){
+    
+    input$rhist1
+    
+    
+    isolate(
       
-       if(names(dataset())[[input$table3_rows_selected]] %in% c("time", "PD_time")){
+      if(rhist_dummy$l==0) NULL
+      
+      else {
+      
+      if(length(unique(rhistdata$l[[input$rhistvar]])) > 20) {
         
-        plot_ly(dataset(), x= ~factor(substr(dataset()[[input$table3_rows_selected]], 6, 7)), color= ~timeofday, colors = "Dark2",
-                width = 850, height = 400)%>% 
-          add_histogram() %>%
-          layout(xaxis = list(title = "Month"),
-                 yaxis = list(title = "Count"),
-                 showlegend = TRUE,
-                 hovermode = 'compare')
+        if(varcolor2.1$l %in% c("ID", "None")) {
+          
+          ggplotly(ggplot(data=rhistdata$l, aes_string(x=input$rhistvar)) +
+                     geom_histogram(color = "blue", fill = "blue", position = "dodge", stat = "count") +
+                     theme_bw())
+        }
+        
+        else{
+          
+          ggplotly(ggplot(data=rhistdata$l, aes_string(x=input$rhistvar, fill = varcolor2.1$l, color = varcolor2.1$l)) +
+                     geom_histogram(position = "dodge", stat = "count") +
+                     theme_bw())
+          
         
         
+        }
       }
+        
+      else {
       
-       else{
+        if(varcolor2.1$l %in% c("ID", "None")) {
         
-        plot_ly(dataset(), x= ~factor(dataset()[[input$table3_rows_selected]]), color= ~timeofday, colors = "Dark2") %>% 
-          add_histogram() %>%
-          layout(xaxis = list(title = names(dataset())[input$table3_rows_selected]),
-                 yaxis = list(title = "count"),
-                 showlegend = TRUE,
-                 hovermode = 'compare'
-                 
-          )
-        
-      } 
+          ggplotly(ggplot(data=rhistdata$l, aes_string(x=input$rhistvar)) +
+                   geom_bar(color = "blue", fill = "blue", position = "dodge", stat = "count") +
+                   scale_x_discrete() +
+                   theme_bw())
+        }
       
-    }
-    
-    else if(input$histstrat==1){
-      
-       if(names(dataset())[[input$table3_rows_selected]] %in% c("time", "PD_time")){
+        else{
         
-        plot_ly(dataset(), x= ~factor(substr(dataset()[[input$table3_rows_selected]], 6, 7)), colors = "Dark2",
-                width = 850, height = 400)%>% 
-          add_histogram() %>%
-          layout(xaxis = list(title = "Month"),
-                 yaxis = list(title = "Count"),
-                 hovermode = 'compare'
-                 
-          )
+        ggplotly(ggplot(data=rhistdata$l, aes_string(x=input$rhistvar, fill = varcolor2.1$l, color = varcolor2.1$l)) +
+                   geom_bar(position = "dodge", stat = "count") +
+                   scale_x_discrete() +
+                   theme_bw())
         
+        }
       }
+    }
+    )
+    
+  })
   
-      else{
-        
-        plot_ly(dataset(), x= ~factor(dataset()[[input$table3_rows_selected]]), colors = "Dark2") %>% 
-          add_histogram() %>%
-          layout(xaxis = list(title = names(dataset())[input$table3_rows_selected]),
-                 yaxis = list(title = "count"),
-                 hovermode = 'compare'
-                 
-          )
-        
-      } 
+  ##code for missing hist
+  
+  output$missinghistR <- renderPlotly({ 
+    
+    input$rhist1
+    
+    
+    isolate(
       
-    }
+      if(rhist_dummy$l==0) NULL
+      
+      else {
+        
+        
+        if(varcolor2.1$l %in% c("ID", "None")) {
+          
+          ggplotly(ggplot(data=rhistdata$m, aes_string(x="na")) +
+                     geom_bar(color = "blue", fill = "blue", position = "dodge", stat = "count") +
+                     scale_x_discrete() +
+                     theme_bw() +
+                     coord_flip())
+        }
+        
+        else{
+          
+          ggplotly(ggplot(data=rhistdata$m, aes_string(x="na", fill = varcolor2.1$l, color = varcolor2.1$l)) +
+                     geom_bar(position = "dodge", stat = "count") +
+                     scale_x_discrete() +
+                     theme_bw()+ 
+                     coord_flip())
+          
+        }
+      }
+    )
     
   })
   
-  
-  missinghist <- reactive({ data.frame(timeofday = dataset()$timeofday,
-                                       value = ifelse(is.na(dataset()[[input$table3_rows_selected]]), 1, NA))
-  })
-  
-  output$histmissR <- renderPlotly({
-    
-    if(input$histstrat==2){
-    plot_ly(missinghist(), y=~factor(value), color = ~timeofday, colors = "Dark2", orientation = 'h',
-            width = 700, height = 160)%>% 
-      add_histogram() %>%
-      layout(
-        xaxis = list(title = "missing count"),
-        yaxis = list(title = ""),
-        margin = list(b=100, r=30), showlegend = FALSE, hovermode = 'compare')
-    }
-    
-    else if(input$histstrat==1){
-      plot_ly(missinghist(), y=~factor(value), colors = "Dark2", orientation = 'h')%>% 
-        add_histogram() %>%
-        layout(
-          xaxis = list(title = "missing count"),
-          yaxis = list(title = ""),
-          autosize = F, width = 700, height = 160, margin = list(b=100, r=30), 
-          showlegend = FALSE, hovermode = 'compare')
-    }
-    
-    
-  })
   
 
   #Responses Page 2, boxplot of responses-----------------------------------------------------------------------------------------------------
   
-  ##data table for boxplot
+ 
+                            #legend.position="none")+ ##data table for boxplot
   output$table4 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
                                        options = list(columnDefs = list(list(
                                          targets = 1,
@@ -2344,7 +2553,6 @@ server <- function(input, output){
                                   panel.border = element_blank(),
                                   plot.margin = unit( c(0.5,0.5,0.5,1) , "cm"),
                                   aspect.ratio = 0.3)+
-                            #legend.position="none")+
                             coord_flip()
                           #coord_flip(ylim=c(0, max(boxdata_dR()[4])), expand = c(0.1,0))+
                           #scale_y_continuous(breaks=seq(0, max(boxdata_dR()[2]), by = 4))
