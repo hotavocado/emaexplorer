@@ -1,5 +1,7 @@
-##data table for boxplot
-output$table4 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
+#Responses Page 4, Trajectory of responses-----------------------------------------------------------------------------------------------------
+
+##Table for Trajectory Plots
+output$table6 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
                                      options = list(columnDefs = list(list(
                                        targets = 1,
                                        render = JS(
@@ -10,180 +12,329 @@ output$table4 <- DT::renderDataTable(data(), selection = list(selected = 8, mode
                                      ))), callback = JS('table.page(3).draw(false);'))
 
 
-#Select main variable
-output$rboxplotvar <- renderUI({selectInput('rboxplotvar', 'Main Variable:', c(names(dataset())), selected = rboxplotvariables$var, selectize=TRUE)})
 
-
-
-#Select coloring variable
-output$rboxplotcolor <- renderUI({selectInput('rboxplotcolor', 'Color By:', c("None", varnames2.2$df), selected = rboxplotvariables$color, selectize=TRUE)})
-
-
-#boxplot color variable
-varcolor2.2 <- reactiveValues(l="ID")
-
-observeEvent(input$rboxplot1, {if (input$rboxplotcolor %in% c("ID", "None")) {varcolor2.2$l <- input$rboxplotcolor}
-  else {varcolor2.2$l <- paste0(input$rboxplotcolor, "_s")} 
-})
-
-# output$boxselectR <- renderUI({selectInput('boxselectR', 'Stratify by:', c("None", varnames$l), selectize=TRUE)})
-
-
-##Use varnames so updating stratify_vars3.1$df2 doesn't refresh subbrowsecolor
-varnames2.2 <- reactiveValues(df=NULL)
-
-
-##Color datasets
-stratify_vars2.2 <- reactiveValues(df = NULL, df2 = NULL)
-
-##Default datasets
-observeEvent(input$go, priority = -1, {
+##Data for trajectory
+Trajdata <- reactive({withProgress(message = 'Loading Data for Plots', {
   
-  stratify_vars2.2$df <- stratify_vars$df_sub %>% select("ID") %>% mutate(dummy_s=1)
-  stratify_vars2.2$df2 <- stratify_vars2.2$df
-  
-  varnames2.2$df <- names(stratify_vars$df_full)
-  
-  
-})
-
-
-##create the appropriate stratify_vars2.2$df 
-observeEvent(input$rboxplot1, {
-  
-  if(!input$rboxplotcolor %in% c("ID", "None")) {
-    stratify_vars2.2$df <- stratify_vars$df_full %>% select_("ID", input$rboxplotcolor) %>%
-      group_by(ID) %>%
-      summarise_at(input$rboxplotcolor, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
-                                                                  ifelse(is.numeric(x), mean(x, na.rm = T), NA))
-      return(y)}) %>% 
-      ungroup() 
+  if (input$trajnorm %in% "raw") {
+    dataset() %>% 
+      select_(names(dataset())[[1]], "timepoint", "weekday_n", "weekday", "weektime_n", names(dataset())[[input$table6_rows_selected]], "timeofday") %>%
+      mutate_at(names(dataset())[[input$table6_rows_selected]], .funs = funs(as.numeric)) %>%
+      left_join(dataset_vars())
+    
   }
-  
-  else {stratify_vars2.2$df <- stratify_vars$df_sub %>% select_("ID") %>% mutate(dummy_s = 1)}
-  
+  ##Data for subject normalized trajectory
+  else {
+    dataset() %>% 
+      select_(names(dataset())[[1]], "timepoint", "weekday_n", "weekday", "weektime_n", names(dataset())[[input$table6_rows_selected]], "timeofday") %>%
+      group_by_(names(dataset())[[1]]) %>%
+      mutate_at(names(dataset())[[input$table6_rows_selected]], .funs = funs(normalize)) %>%
+      left_join(dataset_vars())
+    
+    
+  }
+})
 })
 
-##Color vars dataset, upon action button, stratify_vars2.2$df2 will update based on variable and quantile selection
 
-observeEvent(input$rboxplot1, ignoreInit = T, {
+##Choose which traces to visualize:
+output$trajcheck <- renderUI({checkboxGroupInput("trajcheck", "View Groups:", choices = c(as.character(unique(dataset_vars()[[input$trajselectR]]))), selected = c(as.character(unique(dataset_vars()[[input$trajselectR]]))))})
+
+##Choose group to stratify by:
+output$trajselectR <- renderUI({selectInput('trajselectR', 'Stratify by:', c("None", names(dataset_vars())[2:ncol(dataset_vars())]), selectize=TRUE)})
+
+##Subset data based on checked
+Trajdatasub <- reactive({Trajdata() %>% filter_(interp(~v %in% input$trajcheck , v=as.name(input$trajselectR)))})
+
+
+##Data for traces plots
+
+###For within day:
+
+Trajdata_Day <- reactive({Trajdata() %>% 
+    group_by_(names(Trajdata())[[1]], "timepoint") %>%
+    summarise_at(names(Trajdata())[[6]], mymean) %>%
+    ungroup() %>%
+    left_join(dataset_vars())
+})
+
+Trajdata_Daysub <- reactive({Trajdata_Day() %>% filter_(interp(~v %in% input$trajcheck , v=as.name(input$trajselectR)))})
+
+###For within day, day level
+
+varval <- reactive ({interp(~paste0(y, "; day ", z) , .values = list(y = as.name(names(dataset())[[1]]), z = as.name("day")))})
+
+Trajdata_Day2 <- reactive({
   
-  stratify_vars2.2$df2 <-  
-    
-    
-    if(input$rboxplotcolor %in% c("ID", "None")) {stratify_vars2.2$df}
+  if (input$trajnorm %in% "raw") {
+    dataset() %>% 
+      select_(names(dataset())[[1]], "day", "timepoint", "weekday_n", "weekday", "weektime_n", names(dataset())[[input$table6_rows_selected]]) %>%
+      mutate_(.dots = setNames(list(varval()), "ID_day")) %>%
+      left_join(dataset_vars())
+  }
   
   else {
-    if(input$rboxplotradio %in% "Auto"){
-      stratify_vars2.2$df %>% 
-        mutate_at(input$rboxplotcolor, function (x) { if (is.character(x) | is.factor(x)) {x}
-          else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) > 20) {my_ntiles(x, input$rboxplotntile)}
-          else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) <= 20) {factor(x, ordered = T, exclude = c(NA, "NaN"))}
-          else {x=NA}
-        }) %>% 
-        rename_at(vars(input$rboxplotcolor), ~ paste0(input$rboxplotcolor, "_s"))
-    }
-    
-    else if (input$rboxplotradio %in% "On"){
-      stratify_vars2.2$df %>% 
-        mutate_at(input$rboxplotcolor, ~my_ntiles(.x, input$rboxplotntile)) %>%
-        rename_at(vars(input$rboxplotcolor), ~ paste0(input$rboxplotcolor, "_s"))
-      
-    }
-    
-    else if (input$rboxplotradio %in% "Off"){
-      stratify_vars2.2$df %>% 
-        rename_at(vars(input$rboxplotcolor), ~ paste0(input$rboxplotcolor, "_s"))
-      
-    }
+    dataset() %>% 
+      select_(names(dataset())[[1]], "day", "timepoint", "weekday_n", "weekday", "weektime_n", names(dataset())[[input$table6_rows_selected]]) %>%
+      group_by_(names(dataset())[[1]]) %>%
+      mutate_at(names(dataset())[[input$table6_rows_selected]], .funs = funs(normalize)) %>%
+      ungroup() %>%
+      mutate_(.dots = setNames(list(varval()), "ID_day")) %>%
+      left_join(dataset_vars())
   }
   
 })
 
+Trajdata_Daysub2 <- reactive({Trajdata_Day2() %>% filter_(interp(~v %in% input$trajcheck , v=as.name(input$trajselectR)))})
 
-#Random plot
 
-#make plot update after new variables are selected
 
-rboxplotvariables <- reactiveValues(var = "ID", color = "None")
+###For within week:
 
-#Default boxplot variable
-observeEvent(input$go, priority = -1, {
-  
-  rboxplotvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
-  
+Trajdata_Week <- reactive({Trajdata() %>% 
+    group_by_(names(Trajdata())[[1]], "weekday_n") %>%
+    summarise_at(names(Trajdata())[[6]], mymean) %>%
+    ungroup() %>%
+    left_join(dataset_vars())
 })
 
-rboxplotrandbutton <- reactiveValues(r1=NULL, r2=NULL)
+Trajdata_Weeksub <- reactive({Trajdata_Week() %>% filter_(interp(~v %in% input$trajcheck , v=as.name(input$trajselectR)))})
 
-observeEvent(input$rboxplotrandom, priority = 2, ignoreInit = T, {
-  
-  rboxplotrandbutton$r1 <- sample(1:length(names(dataset())), 1)
-  
-  rboxplotrandbutton$r2 <- sample(1:length(varnames2.2$df), 1)
-  
-  
-  if("Main Var." %in% input$rboxplotrand_choice) {rboxplotvariables$var <- names(dataset())[[rboxplotrandbutton$r1]]}
-  
-  if("Color Var." %in% input$rboxplotrand_choice) {rboxplotvariables$color <- varnames2.2$df[[rboxplotrandbutton$r2]]}
-  
+###For 28 timepoints:
+
+trajweek <- reactive({Trajdata() %>% 
+    group_by_(names(Trajdata())[[1]], "weektime_n") %>%
+    summarise(weekday = unique(weekday), timeofday = timeofday[[1]])})
+
+Trajdata_Weektime <- reactive({Trajdata() %>% 
+    group_by_(names(Trajdata())[[1]], "weektime_n") %>%
+    summarise_at(names(Trajdata())[[6]], mymean) %>%
+    ungroup() %>%
+    left_join(trajweek()) %>%
+    left_join(dataset_vars())
 })
 
+Trajdata_Weektimesub <- reactive({Trajdata_Weektime() %>% filter_(interp(~v %in% input$trajcheck , v=as.name(input$trajselectR)))})
 
-##Data for response boxplots
 
-rboxplotdata <- reactiveValues(l=NULL, m=NULL)
-
-observeEvent(input$rboxplot1, ignoreInit = T, {
+output$trajdayplot <- renderPlotly({ withProgress(message = 'Processing Plot', {
   
+  #Plots for means
   
-  rboxplotdata$l <- 
-    dataset() %>% 
-    select_("ID", "timepoint", input$rboxplotvar) %>%
-    group_by_("ID") %>%
-    summarise_all(mymean) %>%
-    left_join(stratify_vars2.2$df2, by="ID")
-  
-  #time of day boxplot
-  rboxplotdata$m <- 
-    dataset() %>% 
-    select_("ID", "timepoint", "timeofday", input$rboxplotvar) %>%
-    group_by_("ID", "timeofday") %>%
-    summarise_all(mymean)
-  
-})
-
-
-
-#dummy variable to control plot, since plot runs automatically when page is selected, will make it dependent on a reactive value that updates 
-#once the "create plot" button is clicked.
-
-rboxplot_dummy <- reactiveValues(l=0)
-
-observeEvent(input$rboxplot1, ignoreInit = T, {
-  if (rboxplot_dummy$l==0) {rboxplot_dummy$l <- 1}
-  else NULL
-})
-
-##Reset plot when dataset changes
-
-observeEvent(input$go, {
-  rboxplot_dummy$l <- 0
-  
-})
-
-##Instructions that appear before create plot button is clicked
-
-output$rboxplot_instr <-  renderText(
-  if(rboxplot_dummy$l==0) {"Click the [Create/Update Plot] button to generate plot!"}
-  else NULL 
-)
-
-
-##Main boxplot code
-output$boxplot_dR <- renderPlotly({
-  
-  input$rboxplot1
-  
-  isolate(
+  if(input$trajtype %in% "means") {
+    if (input$trajaxis %in% "weektime_n") {
+      if (input$trajselectR %in% "None") {
+        
+        ggplotly(ggplot(Trajdata(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]],  color = input$weektime_color)) +
+                   labs(title = paste0(names(Trajdata())[[6]])) +
+                   #stat_summary(fun.y = mean,
+                   #fun.ymin = function(x) mean(x) - sd(x),
+                   #fun.ymax = function(x) mean(x) + sd(x),
+                   #geom = "pointrange", size = .3)+
+                   stat_summary(fun.data = mean_cl_normal, geom = "pointrange", size = 0.8, alpha = 0.7)+
+                   stat_summary(fun.y = mean,
+                                geom = "line", size = 1, alpha = 0.7) +
+                   
+                   #scale_x_discrete(limits=c(7:22))+
+                   theme_bw(base_size = 11) +
+                   theme(panel.grid = element_blank())
+        )
+      }
       
+      else {
+        ggplotly(ggplot(Trajdatasub(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]], color = input$trajselectR)) +
+                   labs(title = paste0(names(Trajdata())[[6]])) +
+                   #stat_summary(fun.y = mean,
+                   #fun.ymin = function(x) mean(x) - sd(x),
+                   #fun.ymax = function(x) mean(x) + sd(x),
+                   #geom = "pointrange", size = .3)+
+                   stat_summary(fun.data = mean_cl_normal, geom = "pointrange", size = 0.8,  alpha = 0.7)+
+                   stat_summary(fun.y = mean,
+                                geom = "line", size = 1,  alpha = 0.7, mapping = aes_string(linetype = "weekday")) +
+                   
+                   #scale_x_discrete(limits=c(7:22))+
+                   theme_bw(base_size = 11) +
+                   theme(panel.grid = element_blank())  
+        )
+      }
+      
+    }  
+    else {
+      if (input$trajselectR %in% "None") {
+        ggplotly(ggplot(Trajdata(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]])) +
+                   labs(title = paste0(names(Trajdata())[[6]])) +
+                   #stat_summary(fun.y = mean,
+                   #fun.ymin = function(x) mean(x) - sd(x),
+                   #fun.ymax = function(x) mean(x) + sd(x),
+                   #geom = "pointrange", size = .3)+
+                   stat_summary(fun.data = mean_cl_normal, geom = "pointrange", size = 0.8, alpha = 0.7, color = "deepskyblue2")+
+                   stat_summary(fun.y = mean,
+                                geom = "line", size = 1, alpha = 0.7,  color = "deepskyblue2") +
+                   
+                   #scale_x_discrete(limits=c(7:22))+
+                   theme_bw(base_size = 11) +
+                   theme(panel.grid = element_blank())
+                 
+        )
+      }
+      
+      else {
+        ggplotly(ggplot(Trajdatasub(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]], color = input$trajselectR)) +
+                   labs(title = paste0(names(Trajdata())[[6]])) +
+                   #stat_summary(fun.y = mean,
+                   #fun.ymin = function(x) mean(x) - sd(x),
+                   #fun.ymax = function(x) mean(x) + sd(x),
+                   #geom = "pointrange", size = .3)+
+                   stat_summary(fun.data = mean_cl_normal, geom = "pointrange", size = 0.8,  alpha = 0.7)+
+                   stat_summary(fun.y = mean,
+                                geom = "line", size = 1,  alpha = 0.7) +
+                   #scale_x_discrete(limits=c(7:22))+
+                   theme_bw(base_size = 11) +
+                   theme(panel.grid = element_blank())  
+        )
+      }
+      
+      
+    }
+  }
+  
+  #Plots for traces
+  
+  else if (input$trajtype %in% "subject traces") {
+    if (input$trajaxis %in% "weektime_n") {
+      if (input$trajselectR %in% "None") {
+        
+        ggplotly(ggplot(Trajdata_Weektime(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]], group = names(Trajdata())[[1]],  color = input$weektime_color)) +
+                   labs(title = paste0(names(Trajdata())[[6]])) +
+                   geom_line(size = 0.5, alpha = 0.2)+
+                   #scale_x_discrete(limits=c(7:22))+
+                   theme_bw(base_size = 11) +
+                   theme(panel.grid = element_blank())
+        )
+      }
+      
+      else {
+        ggplotly(ggplot(Trajdata_Weektimesub(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]], group = names(Trajdata())[[1]], color = input$trajselectR)) +
+                   labs(title = paste0(names(Trajdata())[[6]])) +
+                   #stat_summary(fun.y = mean,
+                   #fun.ymin = function(x) mean(x) - sd(x),
+                   #fun.ymax = function(x) mean(x) + sd(x),
+                   #geom = "pointrange", size = .3)+
+                   geom_line(size = 0.5, alpha = 0.2)+
+                   #scale_x_discrete(limits=c(7:22))+
+                   theme_bw(base_size = 11) +
+                   theme(panel.grid = element_blank())  
+                 
+        )
+        
+      }
+    }  
+    else if (input$trajaxis %in% "timepoint") {
+      
+      if(input$daytraces %in% "subject mean") {
+        
+        if (input$trajselectR %in% "None") {
+          ggplotly(ggplot(Trajdata_Day(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]], group = names(Trajdata())[[1]],  color = names(Trajdata())[[1]])) +
+                     labs(title = paste0(names(Trajdata())[[6]])) +
+                     #stat_summary(fun.y = mean,
+                     #fun.ymin = function(x) mean(x) - sd(x),
+                     #fun.ymax = function(x) mean(x) + sd(x),
+                     #geom = "pointrange", size = .3)+
+                     geom_line(size = 0.5, alpha = 0.1)+
+                     #scale_x_discrete(limits=c(7:22))+
+                     theme_bw(base_size = 11) +
+                     theme(panel.grid = element_blank())
+          )
+        }
+        
+        else {
+          ggplotly(ggplot(Trajdata_Daysub(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]], group = names(Trajdata())[[1]],  color = input$trajselectR)) +
+                     labs(title = paste0(names(Trajdata())[[6]])) +
+                     #stat_summary(fun.y = mean,
+                     #fun.ymin = function(x) mean(x) - sd(x),
+                     #fun.ymax = function(x) mean(x) + sd(x),
+                     #geom = "pointrange", size = .3)+
+                     geom_line(size = 0.5, alpha = 0.1)+
+                     #scale_x_discrete(limits=c(7:22))+
+                     theme_bw(base_size = 11) +
+                     theme(panel.grid = element_blank())  
+          )
+        }
+        
+      }
+      
+      else if (input$daytraces %in% "day level") {
+        
+        if (input$trajselectR %in% "None") {
+          ggplotly(ggplot(Trajdata_Day2(), aes_string(x=input$trajaxis, y=names(Trajdata_Day2())[[7]], group = "ID_day", color = names(Trajdata_Day2())[[1]])) +
+                     labs(title = paste0(names(Trajdata())[[6]])) +
+                     #stat_summary(fun.y = mean,
+                     #fun.ymin = function(x) mean(x) - sd(x),
+                     #fun.ymax = function(x) mean(x) + sd(x),
+                     #geom = "pointrange", size = .3)+
+                     geom_line(size = 0.5, alpha = 0.1)+
+                     #scale_x_discrete(limits=c(7:22))+
+                     theme_bw(base_size = 11) +
+                     theme(panel.grid = element_blank())
+          )
+        }
+        
+        else {
+          ggplotly(ggplot(Trajdata_Daysub2(), aes_string(x=input$trajaxis, y=names(Trajdata_Day2())[[7]], group = "ID_day",  color = input$trajselectR)) +
+                     labs(title = paste0(names(Trajdata())[[6]])) +
+                     #stat_summary(fun.y = mean,
+                     #fun.ymin = function(x) mean(x) - sd(x),
+                     #fun.ymax = function(x) mean(x) + sd(x),
+                     #geom = "pointrange", size = .3)+
+                     geom_line(size = 0.5, alpha = 0.1)+
+                     #scale_x_discrete(limits=c(7:22))+
+                     theme_bw(base_size = 11) +
+                     theme(panel.grid = element_blank())  
+          )
+        }
+        
+      }
+      
+      
+      
+    }
+    
+    else if (input$trajaxis %in% "weekday_n") {
+      if (input$trajselectR %in% "None") {
+        ggplotly(ggplot(Trajdata_Week(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]], group = names(Trajdata())[[1]])) +
+                   labs(title = paste0(names(Trajdata())[[6]])) +
+                   #stat_summary(fun.y = mean,
+                   #fun.ymin = function(x) mean(x) - sd(x),
+                   #fun.ymax = function(x) mean(x) + sd(x),
+                   #geom = "pointrange", size = .3)+
+                   geom_line(size = 0.5, alpha = 0.2, color = "deepskyblue2")+
+                   #scale_x_discrete(limits=c(7:22))+
+                   theme_bw(base_size = 11) +
+                   theme(panel.grid = element_blank())
+        )
+      }
+      
+      else {
+        ggplotly(ggplot(Trajdata_Weeksub(), aes_string(x=input$trajaxis, y=names(Trajdata())[[6]], group = names(Trajdata())[[1]],  color = input$trajselectR)) +
+                   labs(title = paste0(names(Trajdata())[[6]])) +
+                   #stat_summary(fun.y = mean,
+                   #fun.ymin = function(x) mean(x) - sd(x),
+                   #fun.ymax = function(x) mean(x) + sd(x),
+                   #geom = "pointrange", size = .3)+
+                   geom_line(size = 0.5, alpha = 0.2)+
+                   #scale_x_discrete(limits=c(7:22))+
+                   theme_bw(base_size = 11) +
+                   theme(panel.grid = element_blank())  
+        )
+      }
+      
+      
+    }
+    
+    
+  }
+  
+})
+  
+})
+
