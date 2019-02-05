@@ -674,31 +674,41 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                  
                                                  h4('Find Subject'),
                                                  
-                                                 uiOutput("subcompsub"),
+                                                 uiOutput("subcomparesubject"),
                                                  
-                                                 h4('Data Options'),
+                                                 h4('Main Variable Options'),
                                                  
-                                                 selectInput("subcompareraw", 
-                                                             label = "Select Data Type:", 
-                                                             choices = c("Raw", "Subject Normalized"),
-                                                             selected = "Raw"),
+                                                 uiOutput("subcomparevar1"),
                                                  
-                                                 selectInput("subcompareaxis", 
-                                                             label = "X-Axis:",
-                                                             choices = c("Assessment Timepoints", "Assessment Day"),
-                                                             selected = "Assessment Timepoints"),
+                                                 uiOutput("subcomparevar2"),
                                                  
-                                                 h4('Top Plot'),
+                                                 radioButtons("subcompareraw", 
+                                                              label = "Main Variable Type:", 
+                                                              choices = c("Raw", "Subject Normalized"),
+                                                              selected = "Raw", inline = T),
                                                  
-                                                 uiOutput("subcomptopvar"),
+                                                 radioButtons("subcomparelevel", "Main Variable Level:", c("Day", "Assessment"), selected = "Assessment", inline = T),
                                                  
-                                                 uiOutput("subcomptopcol"),
+                                                 hr(),
+                                                
                                                  
-                                                 h4('Bottom Plot'),
+                                                 h4('Color Variable Options'), 
                                                  
-                                                 uiOutput("subcompbotvar"),
+                                                 uiOutput("subcomparecolor"),
                                                  
-                                                 uiOutput("subcompbotcol")
+                                                 radioButtons("subcomparecolortype", 
+                                                              label = "Color Variable Type:", 
+                                                              choices = c("Raw", "Subject Normalized"),
+                                                              selected = "Raw", inline = T),
+                                                 
+                                                 uiOutput("subcomparecolorlevel"),
+                                                 
+                                                 radioButtons("subcompareradio", "Color Variable Quantiles:",
+                                                              c("Auto", "On", "Off"), inline = T),
+                                                 
+                                                 sliderInput("subcomparentile", "Number of Quantiles:",
+                                                             min = 2, max = 10,
+                                                             value = 4, step = 1)
                                                  
                                             
                                               
@@ -765,7 +775,15 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                  tabPanel("Subject Variable Compare",
                                           fluidRow(
                                             
-                                            column(12)
+                                            column(12,
+                                                   div(style="display: inline-block;vertical-align:top; width: 550px;", checkboxGroupInput("subcomparerand_choice", label = "Choose Random Inputs:", choices = c("Top Var.", "Bottom Var.", "Color Var.", "Subject"), selected = c("Top Var.", "Bottom Var.", "Color Var."),
+                                                                                                                                           inline = T, width = 500)), 
+                                                   div(style="display: inline-block;vertical-align:top; width: 100px;", actionButton("subcomparerandom", "Random Vars")),
+                                                   div(style="display: inline-block;vertical-align:top; width: 20px;"),
+                                                   div(style="display: inline-block;vertical-align:top; width: 100px;", actionButton("subcompare1", "Create/Update Plot")),
+                                                   verbatimTextOutput("subcompareplot_instr"), 
+                                                   plotlyOutput("subcompareplot", height = 600)
+                                                   )
                                             
                                           )
                                  )
@@ -4033,22 +4051,7 @@ server <- function(input, output){
     }
     
   })
-  
-  ##Data type select for main variable, choices depend on the level of main dataset:
-  
-  output$subbrowsecolorlevel <- renderUI({
-    
-    if (input$subbrowselevel %in% "Assessment") {
-      radioButtons("subbrowsecolorlevel", "Color Variable Level:", c("Subject", "Day", "Assessment"), selected = "Assessment", inline = T)
-    }
-    
-    else if (input$subbrowselevel %in% "Day") {
-      radioButtons("subbrowsecolorlevel", "Color Variable Level:", c("Subject", "Day"), selected = "Day", inline = T)
-    }
-    
-  })
-  
-  
+
   
   ##Key variable for each combination of raw/normalized and assessment/day/suject for coloring variable
   colorvarkey3.2 <- reactive({paste0(input$subbrowsecolortype, "-", input$subbrowsecolorlevel)})
@@ -4451,6 +4454,415 @@ server <- function(input, output){
     )
     
   })
+  
+  
+  #Subject Dashboard Page 3: Subject Compare------------------------------------------------------------------------------------------------------------------------------
+  
+  ##Select variable 1
+  output$subcomparevar1 <- renderUI({selectInput('subcomparevar1', 'Top Variable:', c(names(dataset())), selected = subcomparevariables$var1, selectize=TRUE)})
+  
+  
+  ##select variable 2
+  output$subcomparevar2 <- renderUI({selectInput('subcomparevar2', 'Bottom Variable:', c(names(dataset())), selected = subcomparevariables$var2, selectize=TRUE)})
+  
+  
+  ##Color datasets:
+  stratify_vars3.3 <- reactiveValues(df = NULL, df2 = NULL)
+  
+  ##Default datasets for color and order
+  observeEvent(input$go, priority = -1, {
+    
+    stratify_vars3.3$df <- stratify_vars$df_full %>% select_("ID", "timeindex") %>% mutate(dummy_s = 1)
+    stratify_vars3.3$df2 <- stratify_vars$df_full %>% select_("ID", "weekday") %>% rename(weekday_s = weekday)
+    
+    varnames3.3$df <- names(stratify_vars$df_full)
+    
+    
+  })
+  
+  
+  ##create main dataset with the appropriate level
+  dataset_levels3.3 <- reactiveValues(df = NULL)
+  
+  observeEvent({input$subcompare1}, priority = 1, ignoreInit = T,  {
+    
+    if (input$subcomparelevel %in% "Day") {
+      
+      dataset_levels3.3$df <- dataset() %>% 
+        select_("ID", "day", input$subcomparevar1, input$subcomparevar2) %>% mutate(dummy=1) %>%
+        group_by(ID, day) %>%
+        summarise_all(function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+        return(y)}) %>% 
+        ungroup()
+      
+      
+    }
+    
+    else if (input$subcomparelevel %in% "Assessment") {
+      
+      dataset_levels3.3$df <- dataset() %>% select_("ID", "timeindex", "day", input$subcomparevar1, input$subcomparevar2) %>% mutate(dummy=1)
+      
+      
+      
+    }
+  })
+  
+  
+  ##Using varnames so updating stratify_vars3.3$df2 doesn't refresh subcomparecolor
+  varnames3.3 <- reactiveValues(df=NULL)
+  
+  ##Level select for color variable, choices depend on the level of main dataset:
+  
+  output$subcomparecolorlevel <- renderUI({
+    
+    if (input$subcomparelevel %in% "Assessment") {
+      radioButtons("subcomparecolorlevel", "Color Variable Level:", c("Day", "Assessment"), selected = "Assessment", inline = T)
+    }
+    
+    else if (input$subcomparelevel %in% "Day") {
+      radioButtons("subcomparecolorlevel", "Color Variable Level:", c("Day"), selected = "Day", inline = T)
+    }
+    
+  })
+  
+  
+  ##Key variable for each combination of raw/normalized and assessment/day/suject for coloring variable
+  colorvarkey3.3 <- reactive({paste0(input$subcomparecolortype, "-", input$subcomparecolorlevel)})
+  
+  ##create the appropriate stratify_vars3.3$df 
+  observeEvent({input$subcompare1}, priority = 1, ignoreInit = T, {
+    
+    if(!input$subcomparecolor %in% c("ID", "variable")) {
+      
+      if (colorvarkey3.3() %in% "Raw-Day") {
+        stratify_vars3.3$df <- stratify_vars$df_full %>%
+          group_by(ID, day) %>%
+          summarise_at(input$subcomparecolor, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                        ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+          return(y)}) %>% 
+          ungroup() 
+        
+      }
+      
+      else if (colorvarkey3.3() %in% "Raw-Assessment") {
+        stratify_vars3.3$df <- stratify_vars$df_full %>% select_("ID", "timeindex", input$subcomparecolor)
+      }
+      
+      
+      else if (colorvarkey3.3() %in% "Subject Normalized-Day") {
+        stratify_vars3.3$df <- stratify_vars$df_full %>%
+          group_by(ID, day) %>%
+          summarise_at(input$subcomparecolor, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                        ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+          return(y)}) %>% 
+          ungroup() %>% group_by(ID) %>%
+          mutate_at(input$subcomparecolor, funs(normalize)) %>%
+          ungroup()
+      }
+      
+      else if (colorvarkey3.3() %in% "Subject Normalized-Assessment") {
+        stratify_vars3.3$df <- stratify_vars$df_full %>% select_("ID", "timeindex", input$subcomparecolor) %>%
+          group_by(ID) %>%
+          mutate_at(input$subcomparecolor, funs(normalize)) %>%
+          ungroup()
+      }
+      
+    }
+    
+    else {
+      
+      if (colorvarkey3.3() %in% c("Raw-Assessment", "Subject Normalized-Assessment")) {
+        
+        stratify_vars3.3$df <- stratify_vars$df_full %>% select_("ID", "timeindex") %>% mutate(dummy_s=1)}
+      
+      else if (colorvarkey3.3() %in% c("Raw-Day", "Subject Normalized-Day")) {
+        
+        stratify_vars3.3$df <- stratify_vars$df_full %>% mutate(dummy=1) %>% group_by(ID, day) %>% summarise(dummy_s=mean(dummy))}
+      
+    }
+    })
+  
+  
+  ##Select coloring variable (subject level, can bin into quantiles)
+  output$subcomparecolor <- renderUI({selectInput('subcomparecolor', 'Color By:', c("variable", varnames3.3$df[!varnames3.3$df %in% "timeindex"]), selected=subcomparevariables$color, selectize=TRUE)})
+  
+  ###varcolor3.3$l is used so selecting color input doesn't automatically update plot
+  varcolor3.3 <- reactiveValues(l="weekday")
+  
+  observeEvent({input$subcomparecolor}, ignoreInit = T, { if(input$subcomparecolor %in% c("ID", "variable")) {varcolor3.3$l <- input$subcomparecolor}
+    else {varcolor3.3$l <- paste0(input$subcomparecolor, "_s")} 
+  })
+  
+  #output$test1 <- renderText(names(subcomparedata$l))
+  
+  #output$test2 <- renderText(input$subcomparecolor)
+  
+  ##Color variable dataset join vars, depending on level and type
+  df2_join_vars3.3 <- reactive({
+    if (input$subcomparecolorlevel %in% "Day") {c("ID", "day")}
+    else if (input$subcomparecolorlevel %in% "Assessment") {c("ID", "timeindex")}
+  })
+  
+  ##Color vars dataset, upon action button, stratify_vars3.3$df2 will update based on variable and quantile selection
+  
+  observeEvent(input$subcompare1, priority = 1, ignoreInit = T, {
+    
+    stratify_vars3.3$df2 <-  
+      
+      if(input$subcomparecolor %in% c("ID", "variable")) {stratify_vars3.3$df}
+    
+    else {
+      if(input$subcompareradio %in% "Auto"){
+        stratify_vars3.3$df %>% select_(df2_join_vars3.3()[1], df2_join_vars3.3()[length(df2_join_vars3.3())], input$subcomparecolor) %>%
+          mutate_at(input$subcomparecolor, function (x) { if (is.character(x) | is.factor(x)) {x}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) > 20) {my_ntiles(x, input$subcomparentile)}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) <= 20) {factor(x, ordered = T, exclude = c(NA, "NaN"))}
+            else {x=NA}
+          }) %>% 
+          rename_at(vars(input$subcomparecolor), ~ paste0(input$subcomparecolor, "_s"))
+      }
+      
+      else if (input$subcompareradio %in% "On"){
+        stratify_vars3.3$df %>% select_(df2_join_vars3.3()[1], df2_join_vars3.3()[length(df2_join_vars3.3())], input$subcomparecolor) %>%
+          mutate_at(input$subcomparecolor, ~my_ntiles(.x, input$subcomparentile)) %>%
+          rename_at(vars(input$subcomparecolor), ~ paste0(input$subcomparecolor, "_s"))
+        
+      }
+      
+      else if (input$subcompareradio %in% "Off"){
+        stratify_vars3.3$df %>% 
+          select_(df2_join_vars3.3()[1], df2_join_vars3.3()[length(df2_join_vars3.3())], input$subcomparecolor) %>%
+          rename_at(vars(input$subcomparecolor), ~ paste0(input$subcomparecolor, "_s"))
+        
+      }
+    }
+    
+    
+  })
+  
+  
+  
+  #subject selector
+  output$subcomparesubject <- renderUI({selectInput('subcomparesubject', 'Select Subject:', c(unique(dataset()$ID)), selected = subcomparevariables$subject, selectize=TRUE)})
+  
+  
+  
+  
+  #Random plot
+  
+  #make plot update after new variables are selected
+  #subcomparerandomcheck <- reactiveValues(l=0, m=0)
+  
+  
+  subcomparevariables <- reactiveValues(var1 = "ID", var2 = "ID", color = "variable", subject = NULL)
+  
+  #Random defaults
+  observeEvent(input$go, priority = -1, {
+    
+    subcomparevariables$var1 <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+    subcomparevariables$var2 <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+    subcomparevariables$subject <- unique(dataset()$ID)[[sample(1:length(unique(dataset()$ID)), 1)]]
+    
+  })
+  
+  subcomparerandbutton <- reactiveValues(r1=NULL, r2=NULL, r3=NULL)
+  
+  observeEvent(input$subcomparerandom, priority = 2, ignoreInit = T, {
+    
+    subcomparerandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    
+    subcomparerandbutton$r2 <- sample(1:length(names(dataset())), 1)
+    
+    subcomparerandbutton$r3 <- sample(1:length(varnames3.3$df), 1)
+    
+    subcomparerandbutton$r4 <- sample(1:length(unique(dataset()$ID)), 1)
+    
+    
+    if("Top Var." %in% input$subcomparerand_choice) {subcomparevariables$var1 <- names(dataset())[[subcomparerandbutton$r1]]}
+    
+    if("Bottom Var." %in% input$subcomparerand_choice) {subcomparevariables$var2 <- names(dataset())[[subcomparerandbutton$r2]]}
+    
+    if ("Color Var." %in% input$subcomparerand_choice) {subcomparevariables$color <- varnames3.3$df[[subcomparerandbutton$r3]]}
+    
+    if ("Subject" %in% input$subcomparerand_choice) {subcomparevariables$order <- unique(dataset()$ID)[[subcomparerandbutton$r4]]}
+    
+  })
+  
+  
+  subcomparedata <- reactiveValues(l=NULL)
+  
+  observeEvent(input$subcompare1, ignoreInit = T, {
+    
+    subcomparedata$l <- 
+      
+      if (input$subcompareraw %in% "Raw" | input$subcomparevar1 %in% "ID" |  input$subcomparevar2 %in% "ID") {
+        
+        if(input$subcomparevar1 == input$subcomparevar2) {
+          
+          dataset_levels3.3$df %>% 
+            left_join(stratify_vars3.3$df2, by=c(df2_join_vars3.3())) %>%
+            filter(ID %in% input$subcomparesubject) %>%
+            gather(input$subcomparevar1, input$subcomparevar2, key = variable, value = value) 
+        }
+        
+        else {
+          
+          dataset_levels3.3$df %>% 
+            left_join(stratify_vars3.3$df2, by=c(df2_join_vars3.3())) %>%
+            filter(ID %in% input$subcomparesubject) %>%
+            gather(input$subcomparevar1, input$subcomparevar2, key = variable, value = value) %>%
+            mutate(variable = factor(variable, levels = c(input$subcomparevar1, input$subcomparevar2)))
+        }
+      }
+    
+    else if (input$subcompareraw %in% "Subject Normalized") {
+      
+      if(input$subcomparevar1 == input$subcomparevar2) {
+        
+        dataset_levels3.3$df %>% 
+          group_by_("ID") %>%
+          mutate_at(c(input$subcomparevar1, input$subcomparevar2), funs(normalize)) %>%
+          ungroup() %>%
+          left_join(stratify_vars3.3$df2, by=c(df2_join_vars3.3())) %>%
+          filter(ID %in% input$subcomparesubject) %>%
+          gather(input$subcomparevar1, input$subcomparevar2, key = variable, value = value) 
+        
+      }
+      
+      else {
+        
+        dataset_levels3.3$df %>% 
+          group_by_("ID") %>%
+          mutate_at(c(input$subcomparevar1, input$subcomparevar2), funs(normalize)) %>%
+          ungroup() %>%
+          left_join(stratify_vars3.3$df2, by=c(df2_join_vars3.3())) %>%
+          filter(ID %in% input$subcomparesubject) %>%
+          gather(input$subcomparevar1, input$subcomparevar2, key = variable, value = value) %>%
+          mutate(variable = factor(variable, levels = c(input$subcomparevar1, input$subcomparevar2)))
+                 
+      }
+    }
+  })
+        
+        
+        
+        #dummy variable to control plot, since plot runs automatically when page is selected, will make it dependent on a reactive value that updates 
+        #once the "create plot" button is clicked.
+        
+        subcompareplot_dummy <- reactiveValues(l=0)
+        
+        observeEvent(input$subcompare1, priority = 0, ignoreInit = T, {
+          if (subcompareplot_dummy$l==0) {subcompareplot_dummy$l <- 1}
+          else NULL
+        })
+        
+        
+        ##Reset plot when dataset changes
+        
+        observeEvent(input$go, {
+          subcompareplot_dummy$l <- 0
+          
+        })
+        
+        
+        
+        ##Instructions that appear before create plot button is clicked
+        
+        output$subcompareplot_instr <-  renderText(
+          if(subcompareplot_dummy$l==0) {"Click the [Create/Update Plot] button to generate plot!"}
+          else NULL 
+        )
+        
+        
+        ##Subject browser plot 
+        
+        
+        output$subcompareplot <- renderPlotly({
+          
+          input$subcompare1
+          
+          
+          isolate(
+            
+            
+            if(subcompareplot_dummy$l==0) NULL
+            
+            else{
+              
+              
+              
+              if(input$subcomparelevel %in% "Assessment")  {
+                
+                
+                if (is.numeric(subcomparedata$l[[varcolor3.3$l]]) | is.integer(subcomparedata$l[[varcolor3.3$l]])) {
+                  
+                  ggplotly(ggplot(data = subcomparedata$l, aes_string(x = "timeindex", y = "value", group = "day")) +       
+                    geom_line(size = 1, color = "grey")+
+                    geom_point(size = 2, aes_string(color = varcolor3.3$l))+
+                    scale_color_distiller(palette = "Spectral") +
+                    facet_wrap(~variable, nrow = 2, scales = "free_y") + 
+                    theme_bw(base_size = 14) +
+                    scale_x_continuous(breaks = seq(1, max(dataset()$timeindex), by=max(dataset()$timepoint)))+
+                    ggtitle(paste0("Subject ", input$subcomparesubject))
+                    )
+                  
+                }
+                
+                else {
+                  
+                  ggplotly(ggplot(data = subcomparedata$l, aes_string(x = "timeindex", y = "value", group = "day")) +       
+                    geom_line(size = 1, color = "grey")+
+                    geom_point(size = 2, aes_string(color = varcolor3.3$l))+
+                    facet_wrap(~variable, nrow = 2, scales = "free_y") + 
+                    theme_bw(base_size = 14) +
+                    scale_x_continuous(breaks = seq(1, max(dataset()$timeindex), by=max(dataset()$timepoint)))+
+                    ggtitle(paste0("Subject ", input$subcomparesubject))
+                  )
+                  
+                }
+                
+              }
+              
+              else if (input$subcomparelevel %in% "Day")  {
+                
+                
+                if (is.numeric(subcomparedata$l[[varcolor3.3$l]]) | is.integer(subcomparedata$l[[varcolor3.3$l]])) {
+                  
+                  ggplotly(ggplot(data = subcomparedata$l, aes_string(x = "day", y = "value", group = "ID")) +       
+                    geom_line(size = 1, color = "grey")+
+                    geom_point(size = 2, aes_string(color = varcolor3.3$l))+
+                    scale_color_distiller(palette = "Spectral") +
+                    facet_wrap(~variable, nrow = 2, scales = "free_y") + 
+                    theme_bw(base_size = 14) +
+                    scale_x_continuous(breaks = c(1:max(dataset()$day)))+
+                    ggtitle(paste0("Subject ", input$subcomparesubject))
+                  )
+                  
+                }
+                
+                else {
+                  
+                  ggplotly(ggplot(data = subcomparedata$l, aes_string(x = "day", y = "value", group = "ID")) +       
+                    geom_line(size = 1, color = "grey")+
+                    geom_point(size = 2, aes_string(color = varcolor3.3$l))+
+                    facet_wrap(~variable, nrow = 2, scales = "free_y") + 
+                    theme_bw(base_size = 14) +
+                    scale_x_continuous(breaks = c(1:max(dataset()$day))) +
+                    ggtitle(paste0("Subject ", input$subcomparesubject))
+                  )
+                  
+                }
+                
+              }
+              
+            }
+            
+          )
+          
+        })
       
 
 }
