@@ -22,7 +22,7 @@ library(plotly)
 library(Hmisc)
 library(lazyeval)
 library(mosaic)
-
+library(testit)
 #options(warn = -1)
 
 
@@ -473,8 +473,10 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                    
                                                    fluidRow(
                                                      
-                                                     column(
-                                                       3, div(DT::dataTableOutput("table3"), style = "font-size: 75%; width: 75%")),
+                                                     column(3, 
+                                                       verbatimTextOutput("helper2.1title"),
+                                                       div(DT::dataTableOutput("table3"), style = "font-size: 75%; width: 75%"),
+                                                       actionButton("helper2.1button", "Update Helper")),
                                                      
                                                      
                                                      column(9,
@@ -944,6 +946,44 @@ server <- function(input, output){
   
   ##11) "Ordershow" function for ordering variable display, rounds numeric to 2 digits
   ordershow <- function (x) {if (is.numeric(x)) {round(x, 2)} else  {x}}
+  
+  ##12) 
+  
+  myspearman <- function(x, y) {
+    
+    a <- if (has_error(cor.test(x, y, method = 'spearman')))
+      
+      {c(NA,NA,NA,NA)}
+    
+    else {cor.test(x, y, method = 'spearman')}
+
+    
+    return(a)
+    
+  }
+  
+
+  
+  ##14 Helper table dataset generator
+  
+  helpertable <- function(data, var1) {
+    
+    
+    
+    c <- data %>% 
+      mutate_all(~as.numeric(.x)) %>%
+      gather(everything(), -(!!var1), key = variable, value = value) %>% 
+      group_by(variable) %>%
+      dplyr::summarise(spear = list(myspearman((!!var1), value))) %>%
+      group_by(variable) %>%
+      mutate(rho = round(as.numeric(unlist(spear)[[3]]), 4),
+             pval = round(as.numeric(unlist(spear)[[2]]), 4)) %>%
+      select(-spear) %>%
+      arrange(desc(abs(rho)))
+    
+    return(c)
+    
+  }
   
   
 
@@ -2040,8 +2080,39 @@ server <- function(input, output){
 #Responses Page 1, histogram of responses and missing, codebook--------------------------------------------------------------------------------
   
 
-  ##datatable for histogram
-  output$table3 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
+  helper2.1 <- reactiveValues(l=NULL, m=NULL)
+  
+  observeEvent(input$helper2.1button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
+    
+    if(is.null(dataset())|is.null(input$rhistvar)|is.null(stratify_vars$df_full)) {NULL}
+    
+    else {
+    
+    helper2.1$l <-
+      
+      if (is.numeric(dataset()[[input$rhistvar]])) {
+      
+      helpertable(stratify_vars$df_full, sym(input$rhistvar))
+      
+      
+      }
+    
+      else {NULL}
+    
+    helper2.1$m <- paste0("Spearman Cor. for ", input$rhistvar)
+      
+  }
+    
+  })
+    
+  })
+  
+  #helper title
+  output$helper2.1title <- renderText(helper2.1$m)
+  
+  
+  ##helpertable for histogram
+  output$table3 <- DT::renderDataTable(helper2.1$l, selection = list(selected = 1, mode = 'single'),
                                        options = list(columnDefs = list(list(
                                          targets = 1,
                                          render = JS(
@@ -2053,11 +2124,18 @@ server <- function(input, output){
   
   
   
+  #change color selection automatically on helper selection
+  
+  observeEvent(input$table3_rows_selected, {
+    
+    rhistvariables$color <- helper2.1$l[["variable"]][[input$table3_rows_selected]]
+  
+     })
+  
   
   #Select main variable
   output$rhistvar <- renderUI({selectInput('rhistvar', 'Main Variable:', c(names(dataset())), selected = rhistvariables$var, selectize=TRUE)})
-  
-  
+   
   #Select coloring variable
   output$rhistcolor <- renderUI({selectInput('rhistcolor', 'Color By:', c("None", varnames2.1$df), selected = rhistvariables$color, selectize=TRUE)})
   
