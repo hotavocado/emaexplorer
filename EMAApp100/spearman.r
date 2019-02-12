@@ -66,3 +66,73 @@ myspearmanpval <- function(x, y) {
 myspearmanrho(a$cyl, a$mpg) 
 
 myspearmanpval(a$cyl, a$mpg) 
+
+
+
+
+
+
+###for subject compare
+
+a <- helpertable2(NIMHMerged, "PD_Energy", "PD_sad")
+
+
+
+helpertable2 <- function(data, var1, var2) {
+  
+  
+  
+  c <- data %>% 
+    mutate_at(names(data)[2:ncol(data)], ~as.numeric(.x)) %>%
+    group_by(PD_ID) %>%
+    summarise(spear = list(myspearman(.data[[var1]], .data[[var2]]))) %>%
+    mutate(rho = round(as.numeric(unlist(spear)[[3]]), 4),
+           pval = round(as.numeric(unlist(spear)[[2]]), 4)) %>%
+    select(-spear) %>%
+    arrange(desc(abs(rho)))
+  
+  return(c)
+  
+}
+
+
+
+c <- NIMHMerged %>% 
+  mutate_at(names(NIMHMerged)[2:ncol(NIMHMerged)], ~as.numeric(.x)) %>%
+  group_by(PD_ID) %>%
+  summarise(spear = list(myspearman(.x, (!!sym("PD_Energy")), (!!sym("PD_sad"))))) %>%
+  mutate(rho = round(as.numeric(unlist(spear)[[3]]), 4),
+         pval = round(as.numeric(unlist(spear)[[2]]), 4)) %>%
+  select(-spear) %>%
+  arrange(desc(abs(rho)))
+
+
+
+myspearman <- function(x, y) {
+  
+  a <- if (has_error(cor.test(x, y, method = 'spearman')))
+    
+  {c(NA,NA,NA,NA)}
+  
+  else {cor.test(x, y, method = 'spearman')}
+  
+  
+  return(a)
+  
+}
+
+
+
+
+
+gather(everything(), -(!!var1), key = variable, value = value) %>% 
+  group_by(variable) %>%
+  dplyr::summarise(spear = list(myspearman((!!var1), value))) %>%
+  group_by(variable) %>%
+  mutate(rho = round(as.numeric(unlist(spear)[[3]]), 4),
+         pval = round(as.numeric(unlist(spear)[[2]]), 4)) %>%
+  select(-spear) %>%
+  arrange(desc(abs(rho)))
+
+
+

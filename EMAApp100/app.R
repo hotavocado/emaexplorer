@@ -493,9 +493,10 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                           
                                           tabPanel("Response Boxplot",
                                                    fluidRow(
-                                                     column(3,
-                                                            div(style = "height:25px"),
-                                                            div(DT::dataTableOutput("table4"), style = "font-size: 75%; width: 75%")),
+                                                     column(3, 
+                                                            verbatimTextOutput("helper2.2title"),
+                                                            div(DT::dataTableOutput("table4"), style = "font-size: 75%; width: 75%"),
+                                                            actionButton("helper2.2button", "Update Helper")),
                                                      
                                                    
                                                      
@@ -513,9 +514,10 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                           tabPanel("Response Heatmap",
                                                    fluidRow(
                                                      
-                                                     column(3,
-                                                            div(style = "height:25px"),
-                                                            div(DT::dataTableOutput("table5"), style = "font-size: 75%; width: 75%")),
+                                                     column(3, 
+                                                            verbatimTextOutput("helper2.3title"),
+                                                            div(DT::dataTableOutput("table5"), style = "font-size: 75%; width: 75%"),
+                                                            actionButton("helper2.3button", "Update Helper")),
                                                      
                                                      column(1),
                                                      
@@ -544,9 +546,10 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                           tabPanel("Response Trajectory",
                                                    fluidRow(
                                                      
-                                                     column(3,
-                                                            div(style = "height:25px"),
-                                                            div(DT::dataTableOutput("table6"), style = "font-size: 75%; width: 75%")),
+                                                     column(3, 
+                                                            verbatimTextOutput("helper2.4title"),
+                                                            div(DT::dataTableOutput("table6"), style = "font-size: 75%; width: 75%"),
+                                                            actionButton("helper2.4button", "Update Helper")),
                                                      
                                                      column(9,
                                                             div(style = "height:10px"),
@@ -561,9 +564,10 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                           
                                           tabPanel("Response Scatterplot",
                                                    fluidRow(
-                                                     column(3,
-                                                            div(style = "height:25px"),
-                                                            div(DT::dataTableOutput("table7"), style = "font-size: 75%; width: 75%")),
+                                                     column(3, 
+                                                            verbatimTextOutput("helper2.5title"),
+                                                            div(DT::dataTableOutput("table7"), style = "font-size: 75%; width: 75%"),
+                                                            actionButton("helper2.5button", "Update Helper")),
                                                      
                                                 
                                                      
@@ -2406,8 +2410,39 @@ server <- function(input, output){
   #Responses Page 2, boxplot of responses-----------------------------------------------------------------------------------------------------
   
  
-                            #legend.position="none")+ ##data table for boxplot
-  output$table4 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
+  helper2.2 <- reactiveValues(l=NULL, m=NULL)
+  
+  observeEvent(input$helper2.2button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
+    
+    if(is.null(dataset())|is.null(input$rboxplotvar)|is.null(stratify_vars$df_full)) {NULL}
+    
+    else {
+      
+      helper2.2$l <-
+        
+        if (is.numeric(dataset()[[input$rboxplotvar]])) {
+          
+          helpertable(stratify_vars$df_full, sym(input$rboxplotvar))
+          
+          
+        }
+      
+      else {NULL}
+      
+      helper2.2$m <- paste0("Spearman Cor. for ", input$rboxplotvar)
+      
+    }
+    
+  })
+    
+  })
+  
+  #helper title
+  output$helper2.2title <- renderText(helper2.2$m)
+  
+  
+  ##helpertable for histogram
+  output$table4 <- DT::renderDataTable(helper2.2$l, selection = list(selected = 1, mode = 'single'),
                                        options = list(columnDefs = list(list(
                                          targets = 1,
                                          render = JS(
@@ -2416,6 +2451,17 @@ server <- function(input, output){
                                            "'<span title=\"' + data + '\">' + data.substr(0, 12) + '...</span>' : data;",
                                            "}")
                                        ))), callback = JS('table.page(3).draw(false);'))
+  
+  
+  
+  #change color selection automatically on helper selection
+  
+  observeEvent(input$table4_rows_selected, {
+    
+    rboxplotvariables$color <- helper2.2$l[["variable"]][[input$table4_rows_selected]]
+    
+  })
+  
   
   
   #Select main variable
@@ -2714,8 +2760,39 @@ server <- function(input, output){
  
   #Responses Page 3, heatmap of responses-----------------------------------------------------------------------------------------------------
   
-  ##datatable for heatmaps
-  output$table5 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
+  helper2.3 <- reactiveValues(l=NULL, m=NULL)
+  
+  observeEvent(input$helper2.3button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
+    
+    if(is.null(dataset())|is.null(input$rhistvar)|is.null(stratify_vars$df_full)) {NULL}
+    
+    else {
+      
+      helper2.3$l <-
+        
+        if (is.numeric(dataset()[[input$rhistvar]])) {
+          
+          helpertable(stratify_vars$df_full, sym(input$rhistvar))
+          
+          
+        }
+      
+      else {NULL}
+      
+      helper2.3$m <- paste0("Spearman Cor. for ", input$rheatmapvar)
+      
+    }
+    
+  })
+    
+  })
+  
+  #helper title
+  output$helper2.3title <- renderText(helper2.3$m)
+  
+  
+  ##helpertable for histogram
+  output$table5 <- DT::renderDataTable(helper2.3$l, selection = list(selected = 1, mode = 'single'),
                                        options = list(columnDefs = list(list(
                                          targets = 1,
                                          render = JS(
@@ -2724,6 +2801,17 @@ server <- function(input, output){
                                            "'<span title=\"' + data + '\">' + data.substr(0, 12) + '...</span>' : data;",
                                            "}")
                                        ))), callback = JS('table.page(3).draw(false);'))
+  
+  
+  
+  #change color selection automatically on helper selection
+  
+  observeEvent(input$table5_rows_selected, {
+    
+    rheatmapvariables$order <- helper2.3$l[["variable"]][[input$table5_rows_selected]]
+    
+  })
+  
   
   
   #Select main variable
@@ -3046,8 +3134,39 @@ server <- function(input, output){
   #Responses Page 4, trajectory of responses ------------------------------------------------------------------------------
   
   
-  ##datatable for trajectory
-  output$table6 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
+  helper2.4 <- reactiveValues(l=NULL, m=NULL)
+  
+  observeEvent(input$helper2.4button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
+    
+    if(is.null(dataset())|is.null(input$rtrajvar)|is.null(stratify_vars$df_full)) {NULL}
+    
+    else {
+      
+      helper2.4$l <-
+        
+        if (is.numeric(dataset()[[input$rtrajvar]])) {
+          
+          helpertable(stratify_vars$df_full, sym(input$rtrajvar))
+          
+          
+        }
+      
+      else {NULL}
+      
+      helper2.4$m <- paste0("Spearman Cor. for ", input$rtrajvar)
+      
+    }
+    
+  })
+    
+  })
+  
+  #helper title
+  output$helper2.4title <- renderText(helper2.4$m)
+  
+  
+  ##helpertable for histogram
+  output$table6 <- DT::renderDataTable(helper2.4$l, selection = list(selected = 1, mode = 'single'),
                                        options = list(columnDefs = list(list(
                                          targets = 1,
                                          render = JS(
@@ -3056,6 +3175,16 @@ server <- function(input, output){
                                            "'<span title=\"' + data + '\">' + data.substr(0, 12) + '...</span>' : data;",
                                            "}")
                                        ))), callback = JS('table.page(3).draw(false);'))
+  
+  
+  
+  #change color selection automatically on helper selection
+  
+  observeEvent(input$table6_rows_selected, {
+    
+    rtrajvariables$color <- helper2.4$l[["variable"]][[input$table6_rows_selected]]
+    
+  })
   
   
   
@@ -3386,8 +3515,39 @@ server <- function(input, output){
   
   #Response Page 5: Scatterplot-----------------------------------------------------------------------------------------------------
   
-  ##data table for scatterplot
-  output$table7 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
+  helper2.5 <- reactiveValues(l=NULL, m=NULL)
+  
+  observeEvent(input$helper2.5button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
+    
+    if(is.null(dataset())|is.null(input$scatterplot_x_var)|is.null(stratify_vars$df_full)) {NULL}
+    
+    else {
+      
+      helper2.5$l <-
+        
+        if (is.numeric(dataset()[[input$scatterplot_x_var]])) {
+          
+          helpertable(stratify_vars$df_full, sym(input$scatterplot_x_var))
+          
+          
+        }
+      
+      else {NULL}
+      
+      helper2.5$m <- paste0("Spearman Cor. for ", input$scatterplot_x_var)
+      
+    }
+    
+  })
+    
+  })
+  
+  #helper title
+  output$helper2.5title <- renderText(helper2.5$m)
+  
+  
+  ##helpertable for histogram
+  output$table7 <- DT::renderDataTable(helper2.5$l, selection = list(selected = 1, mode = 'single'),
                                        options = list(columnDefs = list(list(
                                          targets = 1,
                                          render = JS(
@@ -3396,6 +3556,16 @@ server <- function(input, output){
                                            "'<span title=\"' + data + '\">' + data.substr(0, 12) + '...</span>' : data;",
                                            "}")
                                        ))), callback = JS('table.page(3).draw(false);'))
+  
+  
+  
+  #change color selection automatically on helper selection
+  
+  observeEvent(input$table7_rows_selected, {
+    
+    scatterplotvariables$y_var <- helper2.5$l[["variable"]][[input$table7_rows_selected]]
+    
+  })
   
   ##Select y axis variable:
   output$scatterplot_y_var <- renderUI({selectInput('scatterplot_y_var', 'Y-Axis Variable:', c(names(dataset())), selected = scatterplotvariables$y_var, selectize=TRUE)})
