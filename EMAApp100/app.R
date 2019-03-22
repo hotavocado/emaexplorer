@@ -854,7 +854,7 @@ server <- function(input, output){
   Freqdata <- function(dataset, maxdata, threshold) {
     
     EMA1 <- dataset %>%               #dataset with number of non missing counts for each question
-      group_by_(names(dataset)[1]) %>%
+      group_by_("ID") %>%
       summarise_all(countna)
     
     EMA1[1] <- max(EMA1[2])
@@ -1324,7 +1324,7 @@ server <- function(input, output){
   
   #Merge main dataset and vars dataset to make final vars datasets for data subset, create dataset at full, day, and subject levels
   
-  stratify_vars <- reactiveValues(df_sub = NULL, df_day = NULL, df_full = NULL)
+  stratify_vars <- reactiveValues(df_sub = NULL, df_full = NULL)
   
   observeEvent(input$go, { withProgress(message = 'Creating Datasets', {
     
@@ -1346,16 +1346,7 @@ server <- function(input, output){
                             return(y)}) %>% 
                             ungroup()
                            
-                           
-    
-    
-    stratify_vars$df_day <- stratify_vars$df_full %>%
-                            group_by(ID, day) %>%
-                            summarise_at(2, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
-                                                ifelse(is.numeric(x), mean(x, na.rm = T), NA))
-                            return(y)}) %>% 
-                            ungroup()
-    
+                      
     
   })
   })
@@ -1364,7 +1355,7 @@ server <- function(input, output){
   #C) Compliance Page 1: frequency histogram, summary box, and getnames---------------------------------------------------------------------------
   
   ##data for frequency histogram
-  data <- reactive({withProgress(message = 'Loading Data', {
+  data <- reactive({withProgress(message = 'Computing Compliance', {
                                  Freqdata(dataset(), dataset_max(), input$num)
                                  })
                                  })
@@ -1460,6 +1451,12 @@ server <- function(input, output){
   #Select main variable
   output$boxplotvar <- renderUI({selectInput('boxplotvar', 'Main Variable:', c(names(dataset())), selected = boxplotvariables$var, selectize=TRUE)})
   
+  #table variable selection
+  observeEvent(input$table1_rows_selected, {
+    
+    boxplotvariables$var <-data()[["Questions"]][[input$table1_rows_selected]]
+    
+  })
   
   
   #Select coloring variable
@@ -1631,6 +1628,7 @@ server <- function(input, output){
   output$boxplot <- renderPlotly({
     
     input$boxplot1
+    input$go
     
     isolate(
       
@@ -1712,6 +1710,7 @@ server <- function(input, output){
   output$boxplotTOD <- renderPlotly({
     
     input$boxplot1
+    input$go
     
     isolate(
       
@@ -1771,7 +1770,12 @@ server <- function(input, output){
   #Select main variable
   output$heatmapvar <- renderUI({selectInput('heatmapvar', 'Main Variable:', c(names(dataset())), selected = heatmapvariables$var, selectize=TRUE)})
   
-  
+  #table variable selecct
+  observeEvent(input$table2_rows_selected, {
+    
+    heatmapvariables$var <-data()[["Questions"]][[input$table2_rows_selected]]
+    
+  })
   
   #Select ordering variable
   output$heatmaporder <- renderUI({selectInput('heatmaporder', 'Order By:', c("None", "Compliance", varnames1.4$df), selected = heatmapvariables$order, selectize=TRUE)})
@@ -1971,6 +1975,7 @@ server <- function(input, output){
   output$heatmap <- renderPlotly({
     
     input$heatmap1
+    input$go
     
     isolate(
       
@@ -2027,6 +2032,7 @@ server <- function(input, output){
   output$heatmapTOD <- renderPlotly({
     
     input$heatmap1
+    input$go
     
     isolate(
       
@@ -2114,6 +2120,16 @@ server <- function(input, output){
   #helper title
   output$helper2.1title <- renderText(helper2.1$m)
   
+  #reset table on dataset change
+  
+  observeEvent(input$go, ignoreInit = T, {
+    
+    helper2.1$l <- NULL
+    
+    helper2.1$m <- NULL
+    
+  })
+  
   
   ##helpertable for histogram
   output$table3 <- DT::renderDataTable(helper2.1$l, selection = list(selected = 1, mode = 'single'),
@@ -2164,7 +2180,7 @@ server <- function(input, output){
   ##Default datasets
   observeEvent(input$go, priority = -1, {
     
-    stratify_vars2.1$df <- stratify_vars$df_full %>% select("ID", "timeindex") %>% mutate(dummy_s=1)
+    stratify_vars2.1$df <- stratify_vars$df_full %>% select("ID") %>% mutate(dummy_s=1)
     stratify_vars2.1$df2 <- stratify_vars2.1$df
     
     varnames2.1$df <- names(stratify_vars$df_full)
@@ -2177,11 +2193,11 @@ server <- function(input, output){
   observeEvent(input$rhist1, {
     
     if(!input$rhistcolor %in% c("ID", "None")) {
-      stratify_vars2.1$df <- stratify_vars$df_full %>% select_("ID", "timeindex", input$rhistcolor)
+      stratify_vars2.1$df <- stratify_vars$df_full %>% select_("ID", input$rhistcolor)
       
     }
     
-    else {stratify_vars2.1$df <- stratify_vars$df_full %>% select_("ID", "timeindex") %>% mutate(dummy_s = 1)}
+    else {stratify_vars2.1$df <- stratify_vars$df_full %>% select_("ID") %>% mutate(dummy_s = 1)}
     
   })
   
@@ -2267,7 +2283,7 @@ server <- function(input, output){
     
     rhistdata$l <- 
       dataset() %>% 
-      select_("ID", "timeindex", input$rhistvar) %>%
+      select_("ID", input$rhistvar) %>%
       mutate_at(input$rhistvar, as.factor) %>%
       left_join(stratify_vars2.1$df2) %>%
       filter(!is.na((!!sym(input$rhistvar)))) 
@@ -2275,7 +2291,7 @@ server <- function(input, output){
     
     rhistdata$m <-
       dataset() %>% 
-      select_("ID", "timeindex", input$rhistvar) %>%
+      select_("ID", input$rhistvar) %>%
       mutate_at(input$rhistvar, as.factor) %>%
       left_join(stratify_vars2.1$df2) %>% 
       mutate_at(input$rhistvar, funs(na=missinghist)) %>%
@@ -2316,7 +2332,7 @@ server <- function(input, output){
   output$histR <- renderPlotly({ 
     
     input$rhist1
-    
+    input$go
     
     isolate(
       
@@ -2373,6 +2389,7 @@ server <- function(input, output){
   output$missinghistR <- renderPlotly({ 
     
     input$rhist1
+    input$go
     
     
     isolate(
@@ -2440,6 +2457,14 @@ server <- function(input, output){
   #helper title
   output$helper2.2title <- renderText(helper2.2$m)
   
+  #reset table when dataset changes
+  observeEvent(input$go, ignoreInit = T, {
+    
+    helper2.2$l <- NULL
+    
+    helper2.2$m <- NULL
+    
+  })
   
   ##helpertable for histogram
   output$table4 <- DT::renderDataTable(helper2.2$l, selection = list(selected = 1, mode = 'single'),
@@ -2638,6 +2663,7 @@ server <- function(input, output){
   output$boxplot_dR <- renderPlotly({
     
     input$rboxplot1
+    input$go
     
     isolate(
       
@@ -2718,6 +2744,7 @@ server <- function(input, output){
   output$boxplotR <- renderPlotly({
     
     input$rboxplot1
+    input$go
     
     isolate(
       
@@ -2789,6 +2816,14 @@ server <- function(input, output){
   
   #helper title
   output$helper2.3title <- renderText(helper2.3$m)
+  
+  observeEvent(input$go, ignoreInit = T, {
+    
+    helper2.3$l <- NULL
+    
+    helper2.3$m <- NULL
+    
+  })
   
   
   ##helpertable for histogram
@@ -3017,6 +3052,7 @@ server <- function(input, output){
   output$heatmapR <- renderPlotly({
     
     input$rheatmap1
+    input$go
     
     isolate(
       
@@ -3073,6 +3109,7 @@ server <- function(input, output){
   output$heatmapTODR <- renderPlotly({
     
     input$rheatmap1
+    input$go
     
     isolate(
       
@@ -3163,6 +3200,15 @@ server <- function(input, output){
   
   #helper title
   output$helper2.4title <- renderText(helper2.4$m)
+  
+  #reset helper on dataset change
+  observeEvent(input$go, ignoreInit = T, {
+    
+    helper2.4$l <- NULL
+    
+    helper2.4$m <- NULL
+    
+  })
   
   
   ##helpertable for histogram
@@ -3341,7 +3387,7 @@ server <- function(input, output){
       rtrajdata$l <- 
         dataset() %>% 
         select_("ID", "timepoint", "weekday", "weekday_n", "weektime_n", "day",  input$rtrajvar) %>%
-        group_by("ID") %>%
+        group_by_("ID") %>%
         mutate_at(input$rtrajvar, funs(normalize)) %>%
         ungroup() %>%
         left_join(stratify_vars2.4$df2, by="ID") 
@@ -3384,6 +3430,7 @@ server <- function(input, output){
   output$trajR <- renderPlotly({ 
     
     input$rtraj1
+    input$go
     
     
     isolate(
@@ -3544,6 +3591,15 @@ server <- function(input, output){
   
   #helper title
   output$helper2.5title <- renderText(helper2.5$m)
+  
+  #reset helper on dataset change
+  observeEvent(input$go, ignoreInit = T, {
+    
+    helper2.5$l <- NULL
+    
+    helper2.5$m <- NULL
+    
+  })
   
   
   ##helpertable for histogram
@@ -3899,6 +3955,7 @@ server <- function(input, output){
   output$scatterplot <- renderPlotly({
     
     input$scatterplot1
+    input$go
     
     isolate(
       
@@ -4198,6 +4255,7 @@ server <- function(input, output){
     
     input$meanbrowse1
     pagenum3.1$l
+    input$go
     
     isolate(
     
@@ -4631,6 +4689,7 @@ server <- function(input, output){
     
     input$subbrowse1
     pagenum3.2$l
+    input$go
     
     isolate(
       
@@ -5031,6 +5090,7 @@ server <- function(input, output){
         output$subcompareplot <- renderPlotly({
           
           input$subcompare1
+          input$go
           
           
           isolate(
