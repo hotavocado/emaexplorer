@@ -596,6 +596,42 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                    
                    sidebarPanel(width = 2,
                                 
+                                conditionalPanel(condition = "input.conditionedPanels3 == 'Subject Scatterplot'",
+                                                 
+                                                 h4("Main Variables Options"),
+                                                 
+                                                 uiOutput("subscatter_y_var"),
+                                                 
+                                                 uiOutput("subscatter_x_var"),
+                                                 
+                                                 radioButtons("subscatterraw", 
+                                                              label = "Select Data Type:", 
+                                                              choices = c("Raw", "Subject Normalized"),
+                                                              selected = "Raw", inline = T),
+                                                 
+                                                 radioButtons("subscatterlevel", "Main Variables Level:", c("Day", "Assessment"), selected = "Assessment", inline = T),
+                                                 
+                                                 hr(),
+                                                 
+                                                 h4('Order Variable Options'), 
+                                                 
+                                                 uiOutput("subscatterorder"),
+                                                 
+                                                 hr(),
+                                                 
+                                                 h4('Color Variable Options'), 
+                                                 
+                                                 uiOutput("subscattercolor"),
+                                                 
+                                                 radioButtons("subscatterradio", "Color Variable Quantiles:",
+                                                              c("Auto", "On", "Off"), inline = T),
+                                                 
+                                                 sliderInput("subscatterntile", "Number of Quantiles:",
+                                                             min = 2, max = 10,
+                                                             value = 4, step = 1)
+                                                 
+                                ),
+                                
                                 conditionalPanel(condition = "input.conditionedPanels3 == 'Subject Mean Trajectory Browse'",
                                                  
                                                  h4('Main Variable Options'),
@@ -728,6 +764,33 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                      
                      tabsetPanel(id = "conditionedPanels3",
                                  
+                                 tabPanel("Subject Scatterplot", 
+                                          
+                                          fluidRow(
+                                            
+                                            column(10,
+                                                   div(style = "height:15px; width:150px;"),
+                                                   div(style="display: inline-block;vertical-align:top; width: 80px;", actionButton("subscatterprev", "Prev")),
+                                                   div(style="display: inline-block;vertical-align:top; width: 80px;", actionButton("subscatternext", "Next")),
+                                                   div(style="display: inline-block;vertical-align:top; width: 100px;", strong("Current Page:"), textOutput("pagenum3.15_display")),
+                                                   div(style="display: inline-block;vertical-align:top; width: 100px;", uiOutput("subscatterpage")),
+                                                   div(style="display: inline-block;vertical-align:top; width: 50px;"),
+                                                   div(style="display: inline-block;vertical-align:top; width: 400px;", checkboxGroupInput("subscatterrand_choice", label = "Choose Random Inputs:", choices = c("Y-Axis Var.", "X-Axis Var.", "Color Var."), selected = c("Y-Axis Var.", "X-Axis Var.", "Color Var."),
+                                                                                                                                           inline = T, width = 300)), 
+                                                   div(style="display: inline-block;vertical-align:top; width: 100px;", actionButton("subscatterrandom", "Random Vars")),
+                                                   div(style="display: inline-block;vertical-align:top; width: 20px;"),
+                                                   div(style="display: inline-block;vertical-align:top; width: 100px;", actionButton("subscatter1", "Create/Update Plot")),
+                                                   div(style="display: inline-block;vertical-align:top; width: 100px;"),
+                                                   verbatimTextOutput("subscatterplot_instr"), 
+                                                   plotOutput("subscatterplot", height = 800)),
+                                            
+                                            column(2)
+                                            
+                                            
+                                            
+                                          )
+                                 ),
+                                 
                                  tabPanel("Subject Mean Trajectory Browse", 
                                           
                                           fluidRow(
@@ -781,7 +844,12 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                  tabPanel("Subject Variable Compare",
                                           fluidRow(
                                             
-                                            column(12,
+                                            column(3, 
+                                                   verbatimTextOutput("helper3.3title"),
+                                                   div(DT::dataTableOutput("table_sub_comp"), style = "font-size: 75%; width: 75%"),
+                                                   actionButton("helper3.3button", "Update Helper")),
+                                            
+                                            column(9,
                                                    div(style="display: inline-block;vertical-align:top; width: 550px;", checkboxGroupInput("subcomparerand_choice", label = "Choose Random Inputs:", choices = c("Top Var.", "Bottom Var.", "Color Var.", "Subject"), selected = c("Top Var.", "Bottom Var.", "Color Var."),
                                                                                                                                            inline = T, width = 500)), 
                                                    div(style="display: inline-block;vertical-align:top; width: 100px;", actionButton("subcomparerandom", "Random Vars")),
@@ -989,7 +1057,28 @@ server <- function(input, output){
     
   }
   
+  ##Helper table/rankings for subjects
   
+  helpertable2 <- function(data, var1, var2) {
+    
+    
+    
+    c <- data %>% 
+      select_("ID", var1, var2) %>%
+      mutate_at(c(var1, var2), ~as.numeric(.x)) %>%
+      group_by(ID) %>%
+      dplyr::summarise(spear = list(myspearman((!!sym(var1)), (!!sym(var2))))) %>%
+      group_by(ID) %>%
+      mutate(rho = round(as.numeric(unlist(spear)[[3]]), 4),
+             pval = round(as.numeric(unlist(spear)[[2]]), 4)) %>%
+      select(-spear) %>%
+      arrange(desc(abs(rho)))
+    
+    
+
+    return(c)
+    
+  }
 
   # B) Datasets-------------------------------------------------------------------------------------------------
   
@@ -3888,7 +3977,7 @@ server <- function(input, output){
     
     if("X-Axis Var." %in% input$scatterplotrand_choice) {scatterplotvariables$x_var <- names(dataset())[[scatterplotrandbutton$r1]]}
     
-    if("Y-Axis Var." %in% input$scatterplotrand_choice) {scatterplotvariables$y_var <- varnames2.5$df[[scatterplotrandbutton$r2]]}
+    if("Y-Axis Var." %in% input$scatterplotrand_choice) {scatterplotvariables$y_var <- names(dataset())[[scatterplotrandbutton$r1]]}
     
     if ("Color Var." %in% input$scatterplotrand_choice) {scatterplotvariables$color <- varnames2.5$df[[scatterplotrandbutton$r3]]}
     
@@ -3984,6 +4073,377 @@ server <- function(input, output){
     )
   })
 
+  
+  
+  #Subject Dashboard Page 1.5: Subject scatterplot------------------------------------------------------------------------------------------------------------------------------
+  
+  ##Select y axis variable:
+  output$subscatter_y_var <- renderUI({selectInput('subscatter_y_var', 'Y-Axis Variable:', c(names(dataset())), selected = subscattervariables$y_var, selectize=TRUE)})
+  
+  ##Select x axis variable
+  output$subscatter_x_var <- renderUI({selectInput('subscatter_x_var', 'X-Axis Variable:', c(names(dataset())), selected = subscattervariables$x_var, selectize=TRUE)})
+  
+  ##Color/interaction datasets
+  stratify_vars3.15 <- reactiveValues(df = NULL, df2 = NULL, df3 = NULL)
+  
+  ##Using varnames so updating stratify_vars3.15$df2 doesn't refresh subbrowsecolor
+  varnames3.15 <- reactiveValues(df=NULL)
+  
+  ##Default datasets for color and order
+  observeEvent(input$go, priority = -1, {
+    
+    stratify_vars3.15$df <- stratify_vars$df_full %>% select_("ID", "timeindex") %>% mutate(dummy_s = 1)
+    stratify_vars3.15$df2 <- stratify_vars$df_sub %>% select_("ID") %>% mutate(dummy_s = 1)
+    stratify_vars3.15$df3 <- stratify_vars$df_sub %>% select_("ID") %>% mutate(dummy_o=1)
+    
+    varnames3.15$df <- names(stratify_vars$df_full)
+    
+  })
+  
+  
+  ##create main dataset with the appropriate level
+  dataset_levels3.15 <- reactiveValues(df = NULL)
+  
+  observeEvent({input$subscatter1}, priority = 1, ignoreInit = T,  {
+    
+    if (input$subscatterlevel %in% "Day") {
+      
+      dataset_levels3.15$df <- dataset() %>% 
+        select_("ID", "day", input$subscatter_y_var, input$subscatter_x_var) %>% mutate(dummy=1) %>%
+        group_by(ID, day) %>%
+        summarise_all(function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+        return(y)}) %>% 
+        ungroup()
+      
+      
+    }
+    
+    else if (input$subbrowselevel %in% "Assessment") {
+      
+      dataset_levels3.15$df <- dataset() %>% select_("ID", "timeindex", input$subscatter_y_var, input$subscatter_x_var) %>% mutate(dummy=1)
+    }
+  })
+  
+  ##Select coloring variable (subject level, can bin into quantiles)
+  output$subscattercolor <- renderUI({selectInput('subscattercolor', 'Color By:', c("None", varnames3.15$df), selected = subscattervariables$color, selectize=TRUE)})
+  
+  ###varcolor3.15$l is used so selecting color input doesn't automatically update plot
+  varcolor3.15 <- reactiveValues(l="None")
+  
+  observeEvent(input$subscatter1, {if (input$subscattercolor %in% c("ID", "None")) {varcolor3.15$l <- input$subscattercolor}
+    else {varcolor3.15$l <- paste0(input$subscattercolor, "_s")} 
+  })
+  
+  
+  ##create the appropriate stratify_vars3.15$df 
+  observeEvent(input$subscatter1, {
+    
+    if(!input$subscattercolor %in% c("ID", "None")) {
+      stratify_vars3.15$df <- stratify_vars$df_full %>% select_("ID", input$subscattercolor) %>%
+        group_by(ID) %>%
+        summarise_at(input$subscattercolor, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                      ifelse(is.numeric(x), mean(x, na.rm = T), NA))
+        return(y)}) %>% 
+        ungroup() 
+    }
+    
+    else {stratify_vars3.15$df <- stratify_vars$df_sub %>% select_("ID") %>% mutate(dummy_s = 1)}
+    
+  })
+  
+  ##Color vars dataset, upon action button, stratify_vars3.15$df2 will update based on variable and quantile selection
+  observeEvent(input$subscatter1, ignoreInit = T, {
+    
+    stratify_vars3.15$df2 <-  
+      
+      if(input$subscattercolor %in% c("ID", "None")) {stratify_vars3.15$df}
+    
+    else {
+      if(input$subscatterradio %in% "Auto"){
+        stratify_vars3.15$df %>% 
+          mutate_at(input$subscattercolor, function (x) { if (is.character(x) | is.factor(x)) {x}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) > 20) {my_ntiles(x, input$subscatterntile)}
+            else if ((is.numeric(x) | is.integer(x)) & length(unique(x)) <= 20) {factor(x, ordered = T, exclude = c(NA, "NaN"))}
+            else {x=NA}
+          }) %>% 
+          rename_at(vars(input$subscattercolor), ~ paste0(input$subscattercolor, "_s"))
+      }
+      
+      else if (input$subscatterradio %in% "On"){
+        stratify_vars3.15$df %>% 
+          mutate_at(input$subscattercolor, ~my_ntiles(.x, input$subscatterntile)) %>%
+          rename_at(vars(input$subscattercolor), ~ paste0(input$subscattercolor, "_s"))
+        
+      }
+      
+      else if (input$subscatterradio %in% "Off"){
+        stratify_vars3.15$df %>% 
+          rename_at(vars(input$subscattercolor), ~ paste0(input$subscattercolor, "_s"))
+        
+      }
+    }
+    
+  })
+  
+  ##Select subject ordering variable 
+  output$subscatterorder <- renderUI({selectInput('subscatterorder', 'Order Subjects By:', c("Spearman Cor.", varnames3.15$df), selected = "Spearman Cor.", selectize=TRUE)})
+  
+  
+  ##Ordered list of subject ID
+  subjectorder3.15 <- reactiveValues(l=NULL, m=NULL)
+  
+  ##Set default value ordered list of subject ID
+  observeEvent(input$go, {
+    subjectorder3.15$l=as.character(stratify_vars$df_sub[["ID"]])
+  })
+  
+  
+  
+  ##Ordering vars dataset, upon action button, stratify_vars3.15$df3 will update based on variable, ordered vector of subjectIDs will be created
+  observeEvent(input$subscatter1, {
+    stratify_vars3.15$df3 <-  
+      
+      if(input$subscatterorder %in% "Spearman Cor.") {
+        stratify_vars$df_full %>%
+          select_("ID", input$subscatter_y_var, input$subscatter_x_var) %>%
+          mutate_at(c(input$subscatter_y_var, input$subscatter_x_var), ~as.numeric(.x)) %>%
+          group_by(ID) %>%
+          dplyr::summarise(spear = list(myspearman((!!sym(input$subscatter_y_var)), (!!sym(input$subscatter_x_var))))) %>%
+          group_by(ID) %>%
+          mutate(rho = round(as.numeric(unlist(spear)[[3]]), 4),
+                 pval = round(as.numeric(unlist(spear)[[2]]), 4)) %>%
+          select(-spear) %>%
+          arrange(desc(rho)) %>%
+          mutate(ID_val = paste0(ID, " | ", "rho=", ordershow(rho)))
+        
+      }
+    
+    else if (!input$subscatterorder %in% "ID"){
+      stratify_vars$df_full %>% 
+        group_by(ID) %>%
+        summarise_at(input$subscatterorder, function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
+                                                                      ifelse(is.numeric(x), mean(x, na.rm = T), "Error"))
+        return(y)}) %>% 
+        ungroup() %>%
+        arrange_(input$subscatterorder) %>%
+        rename_at(vars(input$subscatterorder), ~ paste0(input$subscatterorder, "_o")) %>%
+        mutate(ID_val = paste0(ID, " | ", input$subscatterorder, "=", ordershow(.data[[paste0(input$subscatterorder, "_o")]])))
+    }
+    
+    else {
+      stratify_vars3.15$df3 %>% 
+        select_("ID") %>% 
+        arrange_("ID") %>%
+        mutate(ID_val = ID)
+    }
+    
+    #mutate(ID_val = paste0(ID, " Order Var: ", ordershow(.data[[paste0(input$subscatterorder, "_o")]])))
+    #mutate(ID_val = ID)
+    
+    subjectorder3.15$l <- stratify_vars3.15$df3[["ID"]]
+    subjectorder3.15$m <- stratify_vars3.15$df3[["ID_val"]]
+    
+    
+  })
+  
+  ##Page Selector
+  
+  pagenum3.15 <- reactiveValues(l=1)
+  
+  output$subscatterpage <- renderUI({selectInput('subscatterpage', 'Go To Page:', c(1:ceiling(nrow(stratify_vars$df_sub)/16)), selectize=TRUE)})
+  
+  observeEvent(input$subscatterpage, {pagenum3.15$l <- as.numeric(input$subscatterpage)})
+  
+  observeEvent(input$subscatterprev, {
+    if (pagenum3.15$l > 1) {pagenum3.15$l <- pagenum3.15$l - 1}
+  })
+  
+  observeEvent(input$subscatternext, {
+    if (pagenum3.15$l < ceiling(nrow(stratify_vars$df_sub)/16)) {pagenum3.15$l <- pagenum3.15$l + 1}
+  })
+  
+  ##Pull increments of 16 subjects based on the value of page selector, the IDs are stored as subjectorder16
+  subjectorder16_3.15 <- reactive({ 
+    #when page number is max:
+    if (pagenum3.15$l==ceiling(nrow(stratify_vars$df_sub)/16)) {subjectorder3.15$l[((as.numeric(pagenum3.15$l) - 1)*16 + 1) : length(subjectorder3.15$l)]}
+    #otherwise: ie 1-16, 17-32, and so on
+    else {subjectorder3.15$l[((pagenum3.15$l - 1)*16 + 1) : (pagenum3.15$l*16)]}
+    
+  })
+  
+  subjectorder16_3.15_val <- reactive({ 
+    #when page number is max:
+    if (pagenum3.15$l==ceiling(nrow(stratify_vars$df_sub)/16)) {subjectorder3.15$m[((as.numeric(pagenum3.15$l) - 1)*16 + 1) : length(subjectorder3.15$m)]}
+    #otherwise: ie 1-16, 17-32, and so on
+    else {subjectorder3.15$m[((pagenum3.15$l - 1)*16 + 1) : (pagenum3.15$l*16)]}
+    
+  }) 
+  
+  ##display page
+  output$pagenum3.15_display <- renderText(print(pagenum3.15$l))
+  
+  #reset page number on new plot
+  
+  observeEvent(input$subscatter1, {pagenum3.15$l <- 1})
+  
+  
+  #Random plot
+  
+  #make plot update after new variables are selected
+  
+  subscattervariables <- reactiveValues(x_var = "ID", y_var = "ID", color = "None")
+  
+  #default subscatter vars
+  observeEvent(input$go, priority = -1, {
+    
+    subscattervariables$x_var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+    subscattervariables$y_var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    
+  })
+  
+  subscatterrandbutton <- reactiveValues(r1=NULL, r2=NULL, r3=NULL)
+  
+  observeEvent(input$subscatterrandom, priority = 2, ignoreInit = T, {
+    
+    subscatterrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    
+    subscatterrandbutton$r2 <- sample(1:length(names(dataset())), 1)
+    
+    subscatterrandbutton$r3 <- sample(1:length(varnames3.15$df), 1)
+    
+    
+    if("X-Axis Var." %in% input$subscatterrand_choice) {subscattervariables$x_var <- names(dataset())[[subscatterrandbutton$r1]]}
+    
+    if("Y-Axis Var." %in% input$subscatterrand_choice) {subscattervariables$y_var <- names(dataset())[[subscatterrandbutton$r2]]}
+    
+    if ("Color Var." %in% input$subscatterrand_choice) {subscattervariables$color <- varnames3.15$df[[subscatterrandbutton$r3]]}
+    
+    
+  })
+  
+  
+  ##Create dataset for mean browser plot, 16 subjects per page
+  subscatterdata <- reactiveValues(l=NULL)
+  
+  observeEvent(c(input$subscatter1, pagenum3.15$l), ignoreInit = T, {
+    
+    subscatterdata$l <- 
+      
+      if (input$subscatterraw %in% "Raw" | input$subscatter_y_var %in% "ID" | input$subscatter_x_var %in% "ID" ){
+        
+        dataset_levels3.15$df %>% 
+          select_("ID", input$subscatter_x_var, input$subscatter_y_var) %>%
+          left_join(stratify_vars3.15$df2, by="ID") %>%
+          left_join(stratify_vars3.15$df3, by="ID") %>%
+          filter(ID %in% subjectorder16_3.15()) %>%
+          mutate_at("ID_val", ~factor(., levels = subjectorder16_3.15_val()))
+      }
+    
+    else if (input$subscatterraw %in% "Subject Normalized") {
+      
+      dataset_levels3.15$df %>%
+        select_("ID", input$subscatter_x_var, input$subscatter_y_var) %>%
+        group_by_("ID") %>%
+        mutate_at(c(input$subscatter_y_var, input$subscatter_x_var), funs(normalize)) %>%
+        ungroup() %>%
+        left_join(stratify_vars3.15$df2, by="ID") %>%
+        left_join(stratify_vars3.15$df3, by="ID") %>%
+        filter(ID %in% subjectorder16_3.15()) %>%
+        mutate_at("ID_val", ~factor(., levels = subjectorder16_3.15_val()))
+      
+    }
+    
+  })
+  
+  
+  
+  #dummy variable to control plot, since plot runs automatically when page is selected, will make it dependent on a reactive value that updates 
+  #once the "create plot" button is clicked.
+  
+  subscatterplot_dummy <- reactiveValues(l=0)
+  
+  observeEvent(input$subscatter1, ignoreInit = T, {
+    if (subscatterplot_dummy$l==0) {subscatterplot_dummy$l <- 1}
+    else NULL
+  })
+  
+  ##Reset plot when dataset changes
+  
+  observeEvent(input$go, {
+    subscatterplot_dummy$l <- 0
+    
+  })
+  
+  ##Instructions that appear before create plot button is clicked
+  
+  output$subscatterplot_instr <-  renderText(
+    if(subscatterplot_dummy$l==0) {"Click the [Create/Update Plot] button to generate plot!"}
+    else NULL 
+  )
+  
+  ##Subject scatter plot, view 16 subject level associations at once  
+  
+  output$subscatterplot <- renderPlot({
+    
+    input$subscatter1
+    pagenum3.15$l
+    input$go
+    
+    isolate(
+      
+      if(subscatterplot_dummy$l==0) NULL
+      
+      else{
+        
+        if (varcolor3.15$l %in% "None") {
+        
+            
+            ggplot(data = subscatterdata$l, aes_string(x = input$subscatter_x_var, y = input$subscatter_y_var)) + 
+              geom_jitter(size = 2, width = 0.1, alpha = 0.7) +
+              geom_smooth(method='lm', formula=y~x)+
+              facet_wrap(~ID_val, nrow=4) +
+              theme_bw(base_size = 18) 
+          
+        }
+        
+        else {
+        
+          if (is.numeric(subscatterdata$l[[varcolor3.15$l]]) | is.integer(subscatterdata$l[[varcolor3.15$l]])) {
+          
+            ggplot(data = subscatterdata$l, aes_string(x = input$subscatter_x_var, y = input$subscatter_y_var, color = varcolor3.15$l)) + 
+              geom_jitter(size = 2, width = 0.1, alpha = 0.7) +
+              geom_smooth(method='lm', formula=y~x)+
+              scale_color_distiller(palette = "Spectral") +
+              facet_wrap(~ID_val, nrow=4) +
+              theme_bw(base_size = 18) 
+          
+            }
+        
+          else {
+          
+            ggplot(data = subscatterdata$l, aes_string(x = input$subscatter_x_var, y = input$subscatter_y_var, color = varcolor3.15$l)) + 
+              geom_jitter(size = 2, width = 0.1, alpha = 0.7) +
+              geom_smooth(method='lm', formula=y~x)+
+              facet_wrap(~ID_val, nrow=4) +
+              theme_bw(base_size = 18) 
+          #theme(legend.position = "none")
+          }
+        }
+        
+      }
+      
+    )
+    
+  })
+  
+  
+  
+  
+  
+  
+  
   #Subject Dashboard Page 1: Mean Trajetory Browse------------------------------------------------------------------------------------------------------------------------------
 
   ##Select main y axis variable:
@@ -4764,6 +5224,65 @@ server <- function(input, output){
   
   
   #Subject Dashboard Page 3: Subject Compare------------------------------------------------------------------------------------------------------------------------------
+  
+  
+  #Helper table to select subjects
+  
+  helper3.3 <- reactiveValues(l=NULL, m=NULL)
+  
+  observeEvent(input$helper3.3button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
+    
+    if(is.null(dataset())|is.null(input$subcomparevar1) |is.null(input$subcomparevar2)|is.null(stratify_vars$df_full)) {NULL}
+    
+    else {
+      
+      helper3.3$l <- helpertable2(stratify_vars$df_full, input$subcomparevar1, input$subcomparevar2)
+      
+      helper3.3$m <- paste0("Spearman Cor. for ", input$subcomparevar1, "and ", input$subcomparevar2)
+      
+    }
+    
+  })
+    
+  })
+  
+  #helper title
+  output$helper3.3title <- renderText(helper3.3$m)
+  
+  observeEvent(input$go, ignoreInit = T, {
+    
+    helper3.3$l <- NULL
+    
+    helper3.3$m <- NULL
+    
+  })
+  
+  
+  ##helpertable for histogram
+  output$table_sub_comp <- DT::renderDataTable(helper3.3$l, selection = list(selected = 1, mode = 'single'),
+                                       options = list(columnDefs = list(list(
+                                         targets = 1,
+                                         render = JS(
+                                           "function(data, type, row, meta) {",
+                                           "return type === 'display' && data.length > 12 ?",
+                                           "'<span title=\"' + data + '\">' + data.substr(0, 12) + '...</span>' : data;",
+                                           "}")
+                                       ))), callback = JS('table.page(3).draw(false);'))
+  
+  
+  
+  #change subject selection automatically on helper selection
+  
+  observeEvent(input$table_sub_comp_rows_selected, {
+    
+    subcomparevariables$subject <- helper3.3$l[["ID"]][[input$table_sub_comp_rows_selected]]
+    
+  })
+  
+  
+  
+  
+  
   
   ##Select variable 1
   output$subcomparevar1 <- renderUI({selectInput('subcomparevar1', 'Top Variable:', c(names(dataset())), selected = subcomparevariables$var1, selectize=TRUE)})

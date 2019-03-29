@@ -74,8 +74,10 @@ myspearmanpval(a$cyl, a$mpg)
 
 ###for subject compare
 
-a <- helpertable2(NIMHMerged, "PD_Energy", "PD_sad")
+a <- helpertable2(testdat, "PD_Energy", "PD_sad")
 
+
+testdat <- NIMHMerged %>% select(PD_ID, "PD_Energy", "PD_sad")
 
 
 helpertable2 <- function(data, var1, var2) {
@@ -85,29 +87,27 @@ helpertable2 <- function(data, var1, var2) {
   c <- data %>% 
     mutate_at(names(data)[2:ncol(data)], ~as.numeric(.x)) %>%
     group_by(PD_ID) %>%
-    summarise(spear = list(myspearman(.data[[var1]], .data[[var2]]))) %>%
+    dplyr::summarise(spear = list(myspearman((!!sym(var1)), (!!sym(var2))))) %>%
+    group_by(PD_ID) %>%
     mutate(rho = round(as.numeric(unlist(spear)[[3]]), 4),
            pval = round(as.numeric(unlist(spear)[[2]]), 4)) %>%
     select(-spear) %>%
     arrange(desc(abs(rho)))
   
+
+  
+  
   return(c)
   
 }
 
+#rewrite helper 1 with list column
 
 
-c <- NIMHMerged %>% 
-  mutate_at(names(NIMHMerged)[2:ncol(NIMHMerged)], ~as.numeric(.x)) %>%
-  group_by(PD_ID) %>%
-  summarise(spear = list(myspearman(.x, (!!sym("PD_Energy")), (!!sym("PD_sad"))))) %>%
-  mutate(rho = round(as.numeric(unlist(spear)[[3]]), 4),
-         pval = round(as.numeric(unlist(spear)[[2]]), 4)) %>%
-  select(-spear) %>%
-  arrange(desc(abs(rho)))
+#make the PLOT!!!!
 
 
-
+###
 myspearman <- function(x, y) {
   
   a <- if (has_error(cor.test(x, y, method = 'spearman')))
@@ -125,6 +125,33 @@ myspearman <- function(x, y) {
 
 
 
+
+
+myspearman2 <- function(x) {
+  
+  list(myspearman(x[1], x[2]))
+}
+  
+  
+
+a <- mytest2(NIMHMerged, "PD_Energy", "PD_sad")
+
+
+mytest <-  function(b, c) {
+  
+  a <- data.frame(mean1 = mean(b, na.rm = T), mean2 = mean(c, na.rm = T))
+  
+  return(a)
+  
+}
+
+mytest2 <- function(x, var1, var2) {
+  
+  list(mytest(x[[var1]], x[[var2]]))
+}
+
+
+
 gather(everything(), -(!!var1), key = variable, value = value) %>% 
   group_by(variable) %>%
   dplyr::summarise(spear = list(myspearman((!!var1), value))) %>%
@@ -136,3 +163,11 @@ gather(everything(), -(!!var1), key = variable, value = value) %>%
 
 
 
+c <- NIMHMerged %>% 
+  mutate_at(names(NIMHMerged)[2:ncol(NIMHMerged)], ~as.numeric(.x)) %>%
+  group_by(PD_ID) %>%
+  summarise(spear = list(myspearman(.x, (!!sym("PD_Energy")), (!!sym("PD_sad"))))) %>%
+  mutate(rho = round(as.numeric(unlist(spear)[[3]]), 4),
+         pval = round(as.numeric(unlist(spear)[[2]]), 4)) %>%
+  select(-spear) %>%
+  arrange(desc(abs(rho)))
