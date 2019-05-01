@@ -5,8 +5,8 @@ account: hotavocado
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 302165
-bundleId: 1999308
+bundleId: 2030410
 url: https://hotavocado.shinyapps.io/EMAApp100/
-when: 1554860067.09595
+when: 1555962390.5694
 asMultiple: FALSE
 asStatic: FALSE

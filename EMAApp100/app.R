@@ -1,13 +1,8 @@
-#The great shiny app revamp
+
 
 #EMAApp1.00
 
-#Plan is to code directly from dataset into app.
 
-#Will start with EMA Master dataset
-
-
-#Next steps: Add in scatterplot and subject look-up
 
 
 
@@ -31,6 +26,8 @@ library(testit)
 
 #UI#############################################################################################
 
+##1a) Dataset upload ########################################################################################################
+
 ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                  
                  tabPanel("Dataset",
@@ -45,7 +42,7 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                          
                                          selectInput("dataset", 
                                                      label = NULL, 
-                                                     choices = c("NIMH Merged", "NIMH Palm", "NIMH Droid", "NCCR", "CoLaus", "Upload"),
+                                                     choices = c("NIMH Merged", "NIMH Palm", "NIMH Droid", "Upload"),
                                                      selected = "NIMH Merged", multiple = FALSE,
                                                      selectize = TRUE, width = NULL, size = NULL),
                                          actionButton("go", "Select Dataset"),
@@ -78,6 +75,7 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                             mainPanel(width = 9)
                           )
                         ),
+##2a) Compliance barplot input###########################################################################################################
                  
                  tabPanel("Compliance",
                            
@@ -107,6 +105,7 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                       choices = list("Original Order"= 1, "Freq Perc" = 2, "Alphabetical" = 3), 
                                                       selected = 1)
                                         ),
+##2b) Compliance boxplot input #######################################################################################################
                                         
                                         conditionalPanel(condition = "input.conditionedPanels == 'Compliance Boxplot'",
                                                         
@@ -139,7 +138,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                          actionButton("boxplot1", "Create/Update Plot")
                                         
                                         ),
-                                        
+##2c) Compliance heatmap input################################################################################################
+
                                         conditionalPanel(condition = "input.conditionedPanels == 'Compliance Heatmap'",
                                                          
                                                          h4('Main Variable Options'),
@@ -183,7 +183,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                         )
                                         
                            ),
-                           
+##2d) Compliance barplot output#################################################################################################
+
                            mainPanel(
                         
                             tabsetPanel(id = "conditionedPanels", 
@@ -205,7 +206,9 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                            
                                 )
                               ),
+##2e) Compliance boxplot output###################################################################################################
                               
+                          
                               tabPanel("Compliance Boxplot", 
 
                                 fluidRow(
@@ -232,7 +235,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                          #verbatimTextOutput("palmr"))
                                 )
                               ),
-  
+##2f) Compliance heatmat output################################################################################################
+
                               tabPanel("Compliance Heatmap", 
 
                                 fluidRow(
@@ -259,7 +263,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                           )
                         )
                  ),
-                 
+##2g) Response histogram input############################################################################################
+
                  tabPanel("Responses",
                           
                           pageWithSidebar(
@@ -300,6 +305,7 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                           
                                                       
                                          ),
+##2h) Response boxplot input#################################################################################################
                                          
                                          conditionalPanel(condition = "input.conditionedPanels2 == 'Response Boxplot'",
                                                           
@@ -336,7 +342,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                          
                                                           
                                          ),
-                                         
+##2i) Response heatmap input#############################################################################################                                        
+
                                          conditionalPanel(condition = "input.conditionedPanels2 == 'Response Heatmap'",
                                                           
                                                           h4('Main Variable Options'),
@@ -377,7 +384,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                       
                                                           
                                          ),
-                                         
+##2j) Response trajectory input############################################################################################# 
+
                                          conditionalPanel(condition = "input.conditionedPanels2 == 'Response Trajectory'",
                                                                            
                                                                            h4('Plot Options'),
@@ -418,7 +426,9 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                                            actionButton("rtraj1", "Create/Update Plot")
                                                                           
                                                           ),
-                                         
+
+##2k) Response scatterplot input############################################################################################# 
+
                                          conditionalPanel(condition = "input.conditionedPanels2 == 'Response Scatterplot'",
                                                           
                                                           h4("Main Variables Options"),
@@ -463,7 +473,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                           
                                          ),
                                          
-                            
+##2l) Response histogram output############################################################################################# 
+
                             
                             mainPanel(
                               
@@ -490,6 +501,7 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                      
                                                    )
                                           ),
+##2m) Response boxplot output############################################################################################# 
                                           
                                           tabPanel("Response Boxplot",
                                                    fluidRow(
@@ -509,7 +521,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                             
                                                    )
                                           ), 
-                                          
+##2n) Response heatmap output############################################################################################# 
+
                                           
                                           tabPanel("Response Heatmap",
                                                    fluidRow(
@@ -541,7 +554,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                      
                                                    )
                                            ),
-                          
+##2o) Response trajectory output############################################################################################# 
+
                                        
                                           tabPanel("Response Trajectory",
                                                    fluidRow(
@@ -561,7 +575,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                             plotlyOutput("trajR", height = 700))
                                                    )
                                           ),
-                                          
+##2p) Response scatterplot output############################################################################################# 
+
                                           tabPanel("Response Scatterplot",
                                                    fluidRow(
                                                      column(3, 
@@ -587,7 +602,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                           )
                           
                  ),
-                 
+##2q) Subject scatterplot input############################################################################################# 
+
                  tabPanel("Subject Dashboard",
                    
                    pageWithSidebar(
@@ -631,6 +647,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                              value = 4, step = 1)
                                                  
                                 ),
+##2r) Subject meanbrowse input############################################################################################# 
+                                
                                 
                                 conditionalPanel(condition = "input.conditionedPanels3 == 'Subject Mean Trajectory Browse'",
                                                  
@@ -668,7 +686,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                              value = 4, step = 1)
                                                  
                                 ),
-                                
+##2s) Subject trajectory input############################################################################################# 
+
                                 conditionalPanel(condition = "input.conditionedPanels3 == 'Subject Trajectory Browse'",
                                                  
                                                  h4('Main Variable Options'),
@@ -711,7 +730,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                  
                                                  
                                 ),
-                                
+##2t) Subject compare input############################################################################################# 
+
                                 conditionalPanel(condition = "input.conditionedPanels3 == 'Subject Variable Compare'",
                                                  
                                                  h4('Find Subject'),
@@ -758,7 +778,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                 
                    ),
                    
-                   
+##2u) Subject scatterplot output############################################################################################# 
+
                    
                    mainPanel(
                      
@@ -790,6 +811,7 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                             
                                           )
                                  ),
+##2v) Subject meanbrowse output############################################################################################# 
                                  
                                  tabPanel("Subject Mean Trajectory Browse", 
                                           
@@ -817,7 +839,8 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                             
                                           )
                                  ),
-                                 
+##2v) Subject trajectory output############################################################################################# 
+
                                  tabPanel("Subject Trajectory Browse",
                                           fluidRow(
                                             column(10,
@@ -838,8 +861,10 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                                    ),
                                             column(2)
                                           )
-                                 ), 
-                                 
+                                 ),
+
+##2w) Subject compare output############################################################################################# 
+
                                  
                                  tabPanel("Subject Variable Compare",
                                           fluidRow(
@@ -885,7 +910,7 @@ server <- function(input, output){
   
   #setwd("C:\\Users\\Mike\\Documents\\Rstuff\\ShinyApps\\EMAApp1.0")
   
-  # A) Functions-----------------------------------------------------------------------------------------------------
+  #1) Functions-----------------------------------------------------------------------------------------------------
   
   ##1) "countna": count number of non-misisng reponses for a question (x)
   
@@ -1080,7 +1105,7 @@ server <- function(input, output){
     
   }
 
-  # B) Datasets-------------------------------------------------------------------------------------------------
+  #2) Preloaded Datasets-------------------------------------------------------------------------------------------------
   
   ##NIMH Merged
   NIMHMerged <- read.csv("data/EMA_Master_3_1_19.csv", na.strings = c("NA", "NaN", ""), stringsAsFactors = F) 
@@ -1094,16 +1119,7 @@ server <- function(input, output){
   ##NIMH Droid
   NIMHDroid <- read.csv("data/EMADroid_1_25_18.csv", na.strings = c("NA", "NaN", ""), stringsAsFactors = F) 
   NIMHDroid_max <- read.csv("data/maxdroid.csv", stringsAsFactors = F) 
-  
-  ##NCCR
-  NCCR <- read.csv("data/EMANCCR.csv", na.strings = c("NA", "NaN", ""), stringsAsFactors = F) 
-  NCCR_max <- read.csv("data/maxnccr.csv", stringsAsFactors = F) 
-  NCCRvars <- read.csv("data/NCCRvars.csv", stringsAsFactors = F) 
-  
-  ##Colaus
-  Colaus <- read.csv("data/EMAColaus.csv", na.strings = c("NA", "NaN", ""), stringsAsFactors = F) 
-  Colaus_max <- read.csv("data/maxcolaus.csv", stringsAsFactors = F) 
-  Colausvars <- read.csv("data/Colausvars.csv", stringsAsFactors = F)
+
   
   ##Upload
   
@@ -1125,9 +1141,9 @@ server <- function(input, output){
   
   
   
-  ##Add extra variables to each dataset: timeofday, weekday | diagnosis to vars datasets-----------------------------------------------------------------------
+  ##3) Preloaded dataset preprocess-----------------------------------------------------------------------
   
-  ###NIMHPalm-------------------------------------------------------------------------------------------------------------------------------------------
+      ###NIMHPalm-------------------------------------------------------------------------------------------------------------------------------------------
   NIMHPalm$timeofday  <- ifelse(NIMHPalm$Morning==1, "Morning",
                                 ifelse(NIMHPalm$Noon==1, "Noon",
                                        ifelse(NIMHPalm$Afternoon==1, "Afternoon",
@@ -1161,7 +1177,7 @@ server <- function(input, output){
   
   NIMHPalm$ID <- as.character(NIMHPalm$ID)
   
-  ###NIMHDroid------------------------------------------------------------------------------------------------------------------------------------------
+      ###NIMHDroid------------------------------------------------------------------------------------------------------------------------------------------
   NIMHDroid$timeofday  <- ifelse(NIMHDroid$daySignal==0, "Morning",
                                  ifelse(NIMHDroid$daySignal==1, "Noon",
                                         ifelse(NIMHDroid$daySignal==2, "Afternoon",
@@ -1192,7 +1208,7 @@ server <- function(input, output){
   
   NIMHDroid$timeindex <- NIMHDroid$day * 4 - (4 - NIMHDroid$timepoint)
   
-  ###NIMHMerged---------------------------------------------------------------------------------------------------------------------------------------
+      ###NIMHMerged---------------------------------------------------------------------------------------------------------------------------------------
   NIMHMerged$timeofday  <- ifelse(NIMHMerged$PD_signal==1, "Morning",
                                   ifelse(NIMHMerged$PD_signal==2, "Noon",
                                          ifelse(NIMHMerged$PD_signal==3, "Afternoon",
@@ -1226,7 +1242,7 @@ server <- function(input, output){
   
   NIMHMerged$timeindex <- NIMHMerged$day * 4 - (4 - NIMHMerged$timepoint)
   
-  ###NIMHvars------------------------------------------------------------------------------------------------------------------------------------------
+      ###NIMHvars------------------------------------------------------------------------------------------------------------------------------------------
   NIMHvars$diagnosis <-  ifelse(NIMHvars$BIP1 %in% 1, "bipolar I", 
                                 ifelse(NIMHvars$BIP2 %in% 1, "bipolar II",
                                        ifelse(NIMHvars$MDD_Dx %in% 1, "MDD",
@@ -1246,77 +1262,8 @@ server <- function(input, output){
   
   #NIMHvars <- NIMHvars %>% mutate_all(as.factor)
   
-  ###NCCR----------------------------------------------------------------------------------------------------------------------------------------------
-  NCCR$timeofday  <- ifelse(NCCR$daySignal==0, "Morning",
-                            ifelse(NCCR$daySignal==1, "Noon",
-                                   ifelse(NCCR$daySignal==2, "Afternoon",
-                                          ifelse(NCCR$daySignal==3, "Evening", NA)))) 
-  
-  NCCR$timeofday <- factor(NCCR$timeofday, levels = c("Morning", "Noon", "Afternoon", "Evening"))
-  
-  NCCR$timepoint <- NCCR$daySignal + 1
-  
-  NCCR$weekday <- weekdays(as.Date(NCCR$time))
-  NCCR$weekday <- factor(NCCR$weekday, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
-  
-  NCCR$weekday_n <- ifelse(NCCR$weekday %in% "Monday", 1, 
-                                 ifelse(NCCR$weekday %in% "Tuesday", 2,
-                                        ifelse(NCCR$weekday %in% "Wednesday", 3, 
-                                               ifelse(NCCR$weekday %in% "Thursday", 4,
-                                                      ifelse(NCCR$weekday %in% "Friday", 5,
-                                                             ifelse(NCCR$weekday %in% "Saturday", 6,
-                                                                    ifelse(NCCR$weekday %in% "Sunday", 7, NA)))))))
-  
-  NCCR$weektime_n <- (NCCR$weekday_n - 1) * 4 + NCCR$timepoint
-  
-  NCCRvars$subjectID <- as.character(NCCRvars$subjectID)
-  
-  names(NCCRvars)[1] <- "ID"
-  
-  names(NCCR)[1] <- "ID"
-  
-  NCCR$day <- NCCR$studyDay + 1
-
-  NCCR$timeindex <- NCCR$day * 4 - (4 - NCCR$timepoint)
-  
-  ###Colaus------------------------------------------------------------------------------------------------------------------------------------------
-  Colaus$timeofday  <- ifelse(Colaus$daySignal==0, "Morning",
-                              ifelse(Colaus$daySignal==1, "Noon",
-                                     ifelse(Colaus$daySignal==2, "Afternoon",
-                                            ifelse(Colaus$daySignal==3, "Evening", NA)))) 
-  
-  Colaus$timeofday <- factor(Colaus$timeofday, levels = c("Morning", "Noon", "Afternoon", "Evening"))
-  
-  Colaus$timepoint <- Colaus$daySignal + 1
-  
-  Colaus$weekday <- weekdays(as.Date(Colaus$time))
-  Colaus$weekday <- factor(Colaus$weekday, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
-  
-  Colaus$weekday_n <- ifelse(Colaus$weekday %in% "Monday", 1, 
-                           ifelse(Colaus$weekday %in% "Tuesday", 2,
-                                  ifelse(Colaus$weekday %in% "Wednesday", 3, 
-                                         ifelse(Colaus$weekday %in% "Thursday", 4,
-                                                ifelse(Colaus$weekday %in% "Friday", 5,
-                                                       ifelse(Colaus$weekday %in% "Saturday", 6,
-                                                              ifelse(Colaus$weekday %in% "Sunday", 7, NA)))))))
-  
-  Colaus$weektime_n <- (Colaus$weekday_n - 1) * 4 + Colaus$timepoint
-  
-  Colausvars <- Colausvars %>% mutate_if(is.integer, as.character)
-  
-  Colausvars$subjectID <- as.character(Colausvars$subjectID)
-  
-  Colaus$subjectID <- as.character(Colaus$subjectID)
-  
-  names(Colausvars)[1] <- "ID"
-  
-  names(Colaus)[1] <- "ID"
-  
-  Colaus$day <- Colaus$studyDay + 1
-  
-  Colaus$timeindex <- Colaus$day * 4 - (4 - Colaus$timepoint)
-  
-  ###Upload dataset variable creation-----------------------------------------------------------------------------------------------------------------
+ 
+  ### 4) Upload dataset variable creation-----------------------------------------------------------------------------------------------------------------
   
   #Rules: ID variable is called "ID"
   #1)time variable called "time", in any MM/DD/YY HH:MM:SS format (pick a standard format for time plots)
@@ -1377,7 +1324,7 @@ server <- function(input, output){
   })
     
  
-  ##Get dataset and dataset_max based on input$dataset--------------------------------------------------------------------------------------------------
+  ##5) Dataset selection--------------------------------------------------------------------------------------------------
   dataset <- eventReactive(input$go, {switch(input$dataset,
                               "NIMH Merged" = NIMHMerged,
                               "NIMH Palm" = NIMHPalm,
@@ -1441,7 +1388,7 @@ server <- function(input, output){
   })
   
 
-  #C) Compliance Page 1: frequency histogram, summary box, and getnames---------------------------------------------------------------------------
+  #6a) Compliance barplot ---------------------------------------------------------------------------
   
   ##data for frequency histogram
   data <- reactive({withProgress(message = 'Computing Compliance', {
@@ -1523,7 +1470,7 @@ server <- function(input, output){
                                   else if (input$sort==3) {cat(paste(shQuote(limits3(), type="cmd"), collapse=", "))})
   
   
-  #Compliance Page 2, boxplot of compliance-----------------------------------------------------------------------------------------------------
+  #6b) Compliance boxplot-----------------------------------------------------------------------------------------------------
   
   ##data table for boxplot
   output$table1 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
@@ -1842,7 +1789,7 @@ server <- function(input, output){
   
   
   
-  #Compliances Page 3, heatmap of Compliances-----------------------------------------------------------------------------------------------------
+  #6c) Compliance heatmap-----------------------------------------------------------------------------------------------------
   
   ##datatable for heatmaps
   output$table2 <- DT::renderDataTable(data(), selection = list(selected = 8, mode = 'single'),
@@ -2176,7 +2123,7 @@ server <- function(input, output){
   })
   
 
-#Responses Page 1, histogram of responses and missing, codebook--------------------------------------------------------------------------------
+#6d) Response histogram--------------------------------------------------------------------------------
   
 
   helper2.1 <- reactiveValues(l=NULL, m=NULL)
@@ -2513,7 +2460,7 @@ server <- function(input, output){
   
   
 
-  #Responses Page 2, boxplot of responses-----------------------------------------------------------------------------------------------------
+  #6e) Response boxplot:-----------------------------------------------------------------------------------------------------
   
  
   helper2.2 <- reactiveValues(l=NULL, m=NULL)
@@ -2874,7 +2821,7 @@ server <- function(input, output){
     
   })
  
-  #Responses Page 3, heatmap of responses-----------------------------------------------------------------------------------------------------
+  #6f) Response heatmap-----------------------------------------------------------------------------------------------------
   
   helper2.3 <- reactiveValues(l=NULL, m=NULL)
   
@@ -3257,7 +3204,7 @@ server <- function(input, output){
   
   
   
-  #Responses Page 4, trajectory of responses ------------------------------------------------------------------------------
+  #6g) Response trajectory ------------------------------------------------------------------------------
   
   
   helper2.4 <- reactiveValues(l=NULL, m=NULL)
@@ -3649,7 +3596,7 @@ server <- function(input, output){
   })
   
   
-  #Response Page 5: Scatterplot-----------------------------------------------------------------------------------------------------
+  #6h) Response scatterplot-----------------------------------------------------------------------------------------------------
   
   helper2.5 <- reactiveValues(l=NULL, m=NULL)
   
@@ -4075,7 +4022,7 @@ server <- function(input, output){
 
   
   
-  #Subject Dashboard Page 1.5: Subject scatterplot------------------------------------------------------------------------------------------------------------------------------
+  #6i) Subject scatterplot------------------------------------------------------------------------------------------------------------------------------
   
   ##Select y axis variable:
   output$subscatter_y_var <- renderUI({selectInput('subscatter_y_var', 'Y-Axis Variable:', c(names(dataset())), selected = subscattervariables$y_var, selectize=TRUE)})
@@ -4444,7 +4391,7 @@ server <- function(input, output){
   
   
   
-  #Subject Dashboard Page 1: Mean Trajetory Browse------------------------------------------------------------------------------------------------------------------------------
+  #6j) Subject meanbrowse------------------------------------------------------------------------------------------------------------------------------
 
   ##Select main y axis variable:
   output$meanbrowsevar <- renderUI({selectInput('meanbrowsevar', 'Main Variable:', c(names(dataset())), selected = meanbrowsevariables$var, selectize=TRUE)})
@@ -4752,7 +4699,7 @@ server <- function(input, output){
   
   
   
-  #Subject Dashboard Page 2: Subject Trajetory Browse------------------------------------------------------------------------------------------------------------------------------
+  #6k) Subject trajectory------------------------------------------------------------------------------------------------------------------------------
   
   ##Select main y axis variable:
   output$subbrowsevar <- renderUI({selectInput('subbrowsevar', 'Main Variable:', c(names(dataset())), selected = subbrowsevariables$var, selectize=TRUE)})
@@ -5223,7 +5170,7 @@ server <- function(input, output){
   })
   
   
-  #Subject Dashboard Page 3: Subject Compare------------------------------------------------------------------------------------------------------------------------------
+  #6l) Subject compare------------------------------------------------------------------------------------------------------------------------------
   
   
   #Helper table to select subjects
