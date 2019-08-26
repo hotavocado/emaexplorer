@@ -28,13 +28,13 @@ library(testit)
 
 ##1a) Dataset upload ########################################################################################################
 
-ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
+ui <- navbarPage("VISTA v0.1.0", theme = shinytheme("cosmo"),
                  
                  tabPanel("Dataset",
                           
                           pageWithSidebar(
                             
-                            headerPanel("Upload and Select EMA Dataset"),
+                            headerPanel("Upload and Select Dataset"),
                             
                             sidebarPanel(width = 3, 
                                          
@@ -50,20 +50,20 @@ ui <- navbarPage("EMA Explorer 1.0", theme = shinytheme("cosmo"),
                                          hr(), 
                                          
                                          #Upload file 1
-                                         fileInput("file1", "Upload EMA Dataset",
+                                         fileInput("file1", "Upload main dataset",
                                                    multiple = FALSE,
                                                    accept = c("text/csv",
                                                               "text/comma-separated-values,text/plain",
                                                               ".csv")),
                                          #Upload file 2
-                                         fileInput("file2", "Upload EMA Max Values",
+                                         fileInput("file2", "Upload max-values data for compliance",
                                                    multiple = FALSE,
                                                    accept = c("text/csv",
                                                               "text/comma-separated-values,text/plain",
                                                               ".csv")),
                                          
                                          #Upload file 3
-                                         fileInput("file3", "Upload Covariates",
+                                         fileInput("file3", "Upload covariate dataset",
                                                    multiple = FALSE,
                                                    accept = c("text/csv",
                                                               "text/comma-separated-values,text/plain",
