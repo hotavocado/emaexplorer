@@ -1,12 +1,3 @@
-
-
-#EMAApp1.00
-
-
-
-
-
-#Shiny App
 library(shiny)
 library(tidyverse)
 library(DT)
@@ -42,8 +33,8 @@ ui <- navbarPage("VISTA v0.1.0", theme = shinytheme("cosmo"),
                                          
                                          selectInput("dataset", 
                                                      label = NULL, 
-                                                     choices = c("NIMH Merged", "NIMH Palm", "NIMH Droid", "Upload"),
-                                                     selected = "NIMH Merged", multiple = FALSE,
+                                                     choices = c("Upload", "Example data"),
+                                                     selected = "Upload", multiple = FALSE,
                                                      selectize = TRUE, width = NULL, size = NULL),
                                          actionButton("go", "Select Dataset"),
                                          
@@ -183,32 +174,13 @@ ui <- navbarPage("VISTA v0.1.0", theme = shinytheme("cosmo"),
                                         )
                                         
                            ),
-##2d) Compliance barplot output#################################################################################################
+
+##2e) Compliance boxplot output###################################################################################################
 
                            mainPanel(
                         
                             tabsetPanel(id = "conditionedPanels", 
-                              
-                              tabPanel("Compliance Barplot", 
-
-                                fluidRow(
-                                      
-                                  column(8,
-                                         plotOutput("Bar")),
-                                      
-                                  column(1),
-                                      
-                                  column(3,
-                                         h6("Quick summary:"),
-                                         verbatimTextOutput("median"),
-                                         h6("Get names:"),
-                                         verbatimTextOutput("namespalm"))
-                                           
-                                )
-                              ),
-##2e) Compliance boxplot output###################################################################################################
-                              
-                          
+                            
                               tabPanel("Compliance Boxplot", 
 
                                 fluidRow(
@@ -257,6 +229,26 @@ ui <- navbarPage("VISTA v0.1.0", theme = shinytheme("cosmo"),
                                          plotlyOutput("heatmapTOD", height = 600))
                                   
                             
+                                )
+                              ),
+##2d) Compliance barplot output#################################################################################################
+
+              
+                              tabPanel("Compliance Barplot", 
+                       
+                                fluidRow(
+                         
+                                  column(8,
+                                  plotOutput("Bar")),
+                         
+                                  column(1),
+                         
+                                  column(3,
+                                  h6("Quick summary:"),
+                                  verbatimTextOutput("median"),
+                                  h6("Get names:"),
+                                  verbatimTextOutput("namespalm"))
+                         
                                 )
                               )
                             )
@@ -1107,18 +1099,17 @@ server <- function(input, output){
 
   #2) Preloaded Datasets-------------------------------------------------------------------------------------------------
   
-  ##NIMH Merged
-  NIMHMerged <- read.csv("data/EMA_Master_3_1_19.csv", na.strings = c("NA", "NaN", ""), stringsAsFactors = F) 
-  NIMHMerged_max <- read.csv("data/maxmerged.csv",  stringsAsFactors = F) 
-  NIMHvars <- read.csv("data/NIMHvars.csv", stringsAsFactors = F)
+  #Example Dataset
   
-  ##NIMH Palm
-  NIMHPalm <- read.csv("data/EMAPalm_1_25_18.csv", na.strings = c("NA", "NaN", ""), stringsAsFactors = F) 
-  NIMHPalm_max <- read.csv("data/maxpalm.csv", stringsAsFactors = F) 
+
+    ##Main Dataset
+    NIMHPalm <- read.csv("data/EMAPalm_1_25_18.csv", na.strings = c("NA", "NaN", ""), stringsAsFactors = F) 
   
-  ##NIMH Droid
-  NIMHDroid <- read.csv("data/EMADroid_1_25_18.csv", na.strings = c("NA", "NaN", ""), stringsAsFactors = F) 
-  NIMHDroid_max <- read.csv("data/maxdroid.csv", stringsAsFactors = F) 
+    ##Max Dataset
+    NIMHPalm_max <- read.csv("data/maxpalm.csv", stringsAsFactors = F) 
+  
+    ##Covariates
+    NIMHvars <- read.csv("data/NIMHvars.csv", stringsAsFactors = F)
 
   
   ##Upload
@@ -1129,7 +1120,12 @@ server <- function(input, output){
     Upload$df <- read.csv(input$file1$datapath, na.strings = c("NA", "NaN", ""), stringsAsFactors = F)
   })
   
-  Upload_max <- reactive({ read.csv(input$file2$datapath, stringsAsFactors = F) })
+  Upload_max <- reactiveValues(df = NULL)
+  
+  observeEvent(input$file2, {
+    Upload_max$df <- read.csv(input$file2$datapath, stringsAsFactors = F)
+  })
+  
   
   Upload_vars <- reactiveValues(df = NULL)
   
@@ -1177,72 +1173,8 @@ server <- function(input, output){
   
   NIMHPalm$ID <- as.character(NIMHPalm$ID)
   
-      ###NIMHDroid------------------------------------------------------------------------------------------------------------------------------------------
-  NIMHDroid$timeofday  <- ifelse(NIMHDroid$daySignal==0, "Morning",
-                                 ifelse(NIMHDroid$daySignal==1, "Noon",
-                                        ifelse(NIMHDroid$daySignal==2, "Afternoon",
-                                               ifelse(NIMHDroid$daySignal==3, "Evening", NA)))) 
-  
-  NIMHDroid$timeofday <- factor(NIMHDroid$timeofday, levels = c("Morning", "Noon", "Afternoon", "Evening"))
-  
-  NIMHDroid$timepoint <- NIMHDroid$daySignal + 1
-  
-  NIMHDroid$weekday <- weekdays(as.Date(NIMHDroid$time))
-  NIMHDroid$weekday <- factor(NIMHDroid$weekday, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
-  
-  NIMHDroid$weekday_n <- ifelse(NIMHDroid$weekday %in% "Monday", 1, 
-                               ifelse(NIMHDroid$weekday %in% "Tuesday", 2,
-                                      ifelse(NIMHDroid$weekday %in% "Wednesday", 3, 
-                                             ifelse(NIMHDroid$weekday %in% "Thursday", 4,
-                                                    ifelse(NIMHDroid$weekday %in% "Friday", 5,
-                                                           ifelse(NIMHDroid$weekday %in% "Saturday", 6,
-                                                                  ifelse(NIMHDroid$weekday %in% "Sunday", 7, NA)))))))
-  
-  NIMHDroid$weektime_n <- (NIMHDroid$weekday_n - 1) * 4 + NIMHDroid$timepoint
-  
-  names(NIMHDroid)[1] <- "ID"
-  
-  NIMHDroid$ID <- as.character(NIMHDroid$ID)
-  
-  NIMHDroid$day <- NIMHDroid$studyDay + 1
-  
-  NIMHDroid$timeindex <- NIMHDroid$day * 4 - (4 - NIMHDroid$timepoint)
-  
-      ###NIMHMerged---------------------------------------------------------------------------------------------------------------------------------------
-  NIMHMerged$timeofday  <- ifelse(NIMHMerged$PD_signal==1, "Morning",
-                                  ifelse(NIMHMerged$PD_signal==2, "Noon",
-                                         ifelse(NIMHMerged$PD_signal==3, "Afternoon",
-                                                ifelse(NIMHMerged$PD_signal==4, "Evening", NA)))) 
-  
-  NIMHMerged$timeofday <- factor(NIMHMerged$timeofday, levels = c("Morning", "Noon", "Afternoon", "Evening"))
-  
-  NIMHMerged$timepoint <- ifelse(NIMHMerged$PD_signal==1, 1,
-                                ifelse(NIMHMerged$PD_signal==2, 2,
-                                       ifelse(NIMHMerged$PD_signal==3, 3,
-                                              ifelse(NIMHMerged$PD_signal==4, 4, NA))))
-  
-  NIMHMerged$weekday <- weekdays(as.Date(NIMHMerged$PD_time))
-  NIMHMerged$weekday <- factor(NIMHMerged$weekday, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
-  
-  NIMHMerged$weekday_n <- ifelse(NIMHMerged$weekday %in% "Monday", 1, 
-                                ifelse(NIMHMerged$weekday %in% "Tuesday", 2,
-                                       ifelse(NIMHMerged$weekday %in% "Wednesday", 3, 
-                                              ifelse(NIMHMerged$weekday %in% "Thursday", 4,
-                                                     ifelse(NIMHMerged$weekday %in% "Friday", 5,
-                                                            ifelse(NIMHMerged$weekday %in% "Saturday", 6,
-                                                                   ifelse(NIMHMerged$weekday %in% "Sunday", 7, NA)))))))
-  
-  NIMHMerged$weektime_n <- (NIMHMerged$weekday_n - 1) * 4 + NIMHMerged$timepoint
-  
-  names(NIMHMerged)[1] <- "ID"
-  
-  NIMHMerged$ID <- as.character(NIMHMerged$ID)
-  
-  NIMHMerged <- NIMHMerged %>% dplyr::rename(day = PD_day, time = PD_time)
-  
-  NIMHMerged$timeindex <- NIMHMerged$day * 4 - (4 - NIMHMerged$timepoint)
-  
-      ###NIMHvars------------------------------------------------------------------------------------------------------------------------------------------
+
+  ###NIMHvars------------------------------------------------------------------------------------------------------------------------------------------
   NIMHvars$diagnosis <-  ifelse(NIMHvars$BIP1 %in% 1, "bipolar I", 
                                 ifelse(NIMHvars$BIP2 %in% 1, "bipolar II",
                                        ifelse(NIMHvars$MDD_Dx %in% 1, "MDD",
@@ -1257,10 +1189,7 @@ server <- function(input, output){
   NIMHvars <- NIMHvars %>% mutate(ID = as.character(ID)) %>% 
                            mutate_if(is.integer, function (x) if (length(unique(x)) <= 20)  {as.character(x)} 
                                                               else {x})
-  
 
-  
-  #NIMHvars <- NIMHvars %>% mutate_all(as.factor)
   
  
   ### 4) Upload dataset variable creation-----------------------------------------------------------------------------------------------------------------
@@ -1326,27 +1255,15 @@ server <- function(input, output){
  
   ##5) Dataset selection--------------------------------------------------------------------------------------------------
   dataset <- eventReactive(input$go, {switch(input$dataset,
-                              "NIMH Merged" = NIMHMerged,
-                              "NIMH Palm" = NIMHPalm,
-                              "NIMH Droid" = NIMHDroid,
-                              "NCCR" = NCCR,
-                              "CoLaus" = Colaus,
+                              "Example data" = NIMHPalm,
                               "Upload" = Upload$df)})
   
   dataset_max <- eventReactive(input$go, {switch(input$dataset,
-                                  "NIMH Merged" = NIMHMerged_max,
-                                  "NIMH Palm" = NIMHPalm_max,
-                                  "NIMH Droid" = NIMHDroid_max,
-                                  "NCCR" = NCCR_max,
-                                  "CoLaus" = Colaus_max,
-                                  "Upload" = Upload_max())})
+                                  "Example data" = NIMHPalm_max,
+                                  "Upload" = Upload_max$df)})
   
   dataset_vars <- eventReactive(input$go, {switch(input$dataset,
-                                   "NIMH Merged" = NIMHvars,
-                                   "NIMH Palm" = NIMHvars,
-                                   "NIMH Droid" = NIMHvars,
-                                   "NCCR" = NCCRvars,
-                                   "CoLaus" = Colausvars,
+                                   "Example data" = NIMHvars,
                                    "Upload" = Upload_vars$df)})
   
   
