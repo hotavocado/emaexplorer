@@ -18,7 +18,7 @@ library(testit)
 
 ##1a) Dataset upload ########################################################################################################
 
-ui <- navbarPage("VISTA v0.1.0", theme = shinytheme("cosmo"),
+ui <- navbarPage("mMARCH EMA Explorer v0.1.0", theme = shinytheme("cosmo"),
                  
                  tabPanel("Dataset",
                           
