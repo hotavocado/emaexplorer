@@ -13,7 +13,6 @@ library(testit)
 
 
 
-#setwd('C:\\Users\\Mike\\Documents\\Rstuff\\ShinyApps\\EMAApp1.0')
 
 #UI#############################################################################################
 
@@ -1117,20 +1116,20 @@ server <- function(input, output){
   Upload <- reactiveValues(df = NULL)
   
   observeEvent(input$file1, {
-    Upload$df <- read.csv(input$file1$datapath, na.strings = c("NA", "NaN", ""), stringsAsFactors = F)
+    Upload$df <- read_csv(input$file1$datapath, na = c("NA", "NaN", ""))
   })
   
   Upload_max <- reactiveValues(df = NULL)
   
   observeEvent(input$file2, {
-    Upload_max$df <- read.csv(input$file2$datapath, stringsAsFactors = F)
+    Upload_max$df <- read_csv(input$file2$datapath,  na = c("NA", "NaN", ""))
   })
   
   
   Upload_vars <- reactiveValues(df = NULL)
   
   observeEvent(input$file3, {
-    Upload_vars$df <-  read.csv(input$file3$datapath, stringsAsFactors = F) 
+    Upload_vars$df <-  read_csv(input$file3$datapath, na = c("NA", "NaN", "")) 
   })
   
   
@@ -1236,21 +1235,21 @@ server <- function(input, output){
   
   ####Vars dataset
   
-  observeEvent(input$file3, {
+  #observeEvent(input$file3, {
     
-  Upload_vars$df <- Upload_vars$df %>% mutate(diagnosis = ifelse(BIP1 %in% 1, "bipolar I", 
-                                                               ifelse(BIP2 %in% 1, "bipolar II",
-                                                                      ifelse(MDD_Dx %in% 1, "MDD",
-                                                                             ifelse(ANX %in% 1, "Anxiety",
-                                                                                    ifelse(control %in% 1, "control", "other"))))),
-                                            
-                                            diagnosis = factor(diagnosis, levels = c("bipolar I", "bipolar II", "MDD", "Anxiety", "control", "other"))) %>%
-                                     dplyr::rename(ID = studyid) %>%
-                                     mutate(ID = as.character(ID)) %>%
-                                     mutate_if(is.integer, function (x) if (length(unique(x)) <= 20)  {as.character(x)} 
-                                                                        else {x})
+  #Upload_vars$df <- Upload_vars$df %>% mutate(diagnosis = ifelse(BIP1 %in% 1, "bipolar I", 
+   #                                                            ifelse(BIP2 %in% 1, "bipolar II",
+  #                                                                    ifelse(MDD_Dx %in% 1, "MDD",
+   #                                                                          ifelse(ANX %in% 1, "Anxiety",
+   #                                                                                 ifelse(control %in% 1, "control", "other"))))),
+   #                                         
+    #                                        diagnosis = factor(diagnosis, levels = c("bipolar I", "bipolar II", "MDD", "Anxiety", "control", "other"))) %>%
+    #                                 dplyr::rename(ID = studyid) %>%
+    #                                 mutate(ID = as.character(ID)) %>%
+     #                                mutate_if(is.integer, function (x) if (length(unique(x)) <= 20)  {as.character(x)} 
+     #                                                                   else {x})
   
-  })
+  #})
     
  
   ##5) Dataset selection--------------------------------------------------------------------------------------------------
@@ -1265,6 +1264,17 @@ server <- function(input, output){
   dataset_vars <- eventReactive(input$go, {switch(input$dataset,
                                    "Example data" = NIMHvars,
                                    "Upload" = Upload_vars$df)})
+  
+  dataset_all <- reactiveValues(l = NULL)
+  
+  
+  #add all demo vars to main dataset
+  observeEvent(input$go, ignoreInit = T, {
+    
+    dataset_all$l <- dataset() %>% left_join(dataset_vars(), by = 'ID')
+    
+  })
+  
   
   
   observeEvent(input$go, {showNotification(
@@ -1309,7 +1319,7 @@ server <- function(input, output){
   
   ##data for frequency histogram
   data <- reactive({withProgress(message = 'Computing Compliance', {
-                                 Freqdata(dataset(), dataset_max(), input$num)
+                                 Freqdata(dataset_all$l, dataset_max(), input$num)
                                  })
                                  })
   
@@ -1402,7 +1412,7 @@ server <- function(input, output){
   
   
   #Select main variable
-  output$boxplotvar <- renderUI({selectInput('boxplotvar', 'Main Variable:', c(names(dataset())), selected = boxplotvariables$var, selectize=TRUE)})
+  output$boxplotvar <- renderUI({selectInput('boxplotvar', 'Main Variable:', c(names(dataset_all$l)), selected = boxplotvariables$var, selectize=TRUE)})
   
   #table variable selection
   observeEvent(input$table1_rows_selected, {
@@ -1507,7 +1517,7 @@ server <- function(input, output){
   #Default boxplot variable
   observeEvent(input$go, priority = -1, {
     
-    boxplotvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    boxplotvariables$var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
   })
   
@@ -1515,12 +1525,12 @@ server <- function(input, output){
   
   observeEvent(input$boxplotrandom, priority = 2, ignoreInit = T, {
     
-    boxplotrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    boxplotrandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
     boxplotrandbutton$r2 <- sample(1:length(varnames1.2$df), 1)
     
     
-    if("Main Var." %in% input$boxplotrand_choice) {boxplotvariables$var <- names(dataset())[[boxplotrandbutton$r1]]}
+    if("Main Var." %in% input$boxplotrand_choice) {boxplotvariables$var <- names(dataset_all$l)[[boxplotrandbutton$r1]]}
     
     if("Color Var." %in% input$boxplotrand_choice) {boxplotvariables$color <- varnames1.2$df[[boxplotrandbutton$r2]]}
     
@@ -1535,7 +1545,7 @@ server <- function(input, output){
     
     
     boxplotdata$l <- 
-      dataset() %>% 
+      dataset_all$l %>% 
       select_("ID", "timepoint", input$boxplotvar) %>%
       group_by_("ID") %>%
       summarise_all(countna) %>%
@@ -1543,7 +1553,7 @@ server <- function(input, output){
     
     #time of day boxplot
     boxplotdata$m <- 
-      dataset() %>% 
+      dataset_all$l %>% 
       select_("ID", "timepoint", "timeofday", input$boxplotvar) %>%
       group_by_("ID", "timeofday") %>%
       summarise_all(countna)
@@ -1721,7 +1731,7 @@ server <- function(input, output){
   
   
   #Select main variable
-  output$heatmapvar <- renderUI({selectInput('heatmapvar', 'Main Variable:', c(names(dataset())), selected = heatmapvariables$var, selectize=TRUE)})
+  output$heatmapvar <- renderUI({selectInput('heatmapvar', 'Main Variable:', c(names(dataset_all$l)), selected = heatmapvariables$var, selectize=TRUE)})
   
   #table variable selecct
   observeEvent(input$table2_rows_selected, {
@@ -1799,7 +1809,7 @@ server <- function(input, output){
   #default heatmap var
   observeEvent(input$go, priority = -1, {
     
-    heatmapvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    heatmapvariables$var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
   })
   
@@ -1809,12 +1819,12 @@ server <- function(input, output){
   
   observeEvent(input$heatmaprandom, priority = 2, ignoreInit = T, {
     
-    heatmaprandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    heatmaprandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
     heatmaprandbutton$r2 <- sample(1:length(varnames1.4$df), 1)
     
     
-    if("Main Var." %in% input$heatmaprand_choice) {heatmapvariables$var <- names(dataset())[[heatmaprandbutton$r1]]}
+    if("Main Var." %in% input$heatmaprand_choice) {heatmapvariables$var <- names(dataset_all$l)[[heatmaprandbutton$r1]]}
     
     if("Order Var." %in% input$heatmaprand_choice) {heatmapvariables$order <- varnames1.4$df[[heatmaprandbutton$r2]]}
     
@@ -1833,7 +1843,7 @@ server <- function(input, output){
       
       if(input$heatmaporder %in% "None"){
         
-        dataset() %>% 
+        dataset_all$l %>% 
           select_("ID", "timepoint", input$heatmapvar) %>%
           group_by_("ID") %>%
           summarise_all(countna) %>%
@@ -1843,7 +1853,7 @@ server <- function(input, output){
     
     else if (input$heatmaporder %in% "Compliance") {
       
-      dataset() %>% 
+      dataset_all$l %>% 
         select_("ID", "timepoint", input$heatmapvar) %>%
         group_by_("ID") %>%
         summarise_all(countna) %>%
@@ -1853,7 +1863,7 @@ server <- function(input, output){
     
     else {
       
-      dataset() %>% 
+      dataset_all$l %>% 
         select_("ID", "timepoint", input$heatmapvar) %>%
         group_by_("ID") %>%
         summarise_all(countna) %>%
@@ -1867,7 +1877,7 @@ server <- function(input, output){
       
       if (input$heatmapraw %in% "raw") {
         
-        dataset() %>% 
+        dataset_all$l %>% 
           select_("ID", "timeofday", "weekday", input$heatmapvar) %>%
           group_by_("ID", input$heatmapstrat) %>%
           summarise_all(countna) %>%
@@ -1878,7 +1888,7 @@ server <- function(input, output){
       
       if (input$heatmapvar %in% "ID") {
         
-        dataset() %>% 
+        dataset_all$l %>% 
           select_("ID", "timeofday", "weekday", input$heatmapvar) %>%
           group_by_("ID", input$heatmapstrat) %>%
           summarise_all(countna) %>%
@@ -1887,7 +1897,7 @@ server <- function(input, output){
       
       else {
         
-        dataset() %>% 
+        dataset_all$l %>% 
           select_("ID", "timeofday", "weekday", input$heatmapvar) %>%
           group_by_("ID") %>%
           mutate_at(input$heatmapvar, .funs = funs(normalize)) %>%
@@ -2047,13 +2057,13 @@ server <- function(input, output){
   
   observeEvent(input$helper2.1button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
     
-    if(is.null(dataset())|is.null(input$rhistvar)|is.null(stratify_vars$df_full)) {NULL}
+    if(is.null(dataset_all$l)|is.null(input$rhistvar)|is.null(stratify_vars$df_full)) {NULL}
     
     else {
     
     helper2.1$l <-
       
-      if (is.numeric(dataset()[[input$rhistvar]])) {
+      if (is.numeric(dataset_all$l[[input$rhistvar]])) {
       
       helpertable(stratify_vars$df_full, sym(input$rhistvar))
       
@@ -2107,7 +2117,7 @@ server <- function(input, output){
   
   
   #Select main variable
-  output$rhistvar <- renderUI({selectInput('rhistvar', 'Main Variable:', c(names(dataset())), selected = rhistvariables$var, selectize=TRUE)})
+  output$rhistvar <- renderUI({selectInput('rhistvar', 'Main Variable:', c(names(dataset_all$l)), selected = rhistvariables$var, selectize=TRUE)})
    
   #Select coloring variable
   output$rhistcolor <- renderUI({selectInput('rhistcolor', 'Color By:', c("None", varnames2.1$df), selected = rhistvariables$color, selectize=TRUE)})
@@ -2205,7 +2215,7 @@ server <- function(input, output){
   #Default hist variable
   observeEvent(input$go, priority = -1, {
     
-    rhistvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    rhistvariables$var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
   })
   
@@ -2213,12 +2223,12 @@ server <- function(input, output){
   
   observeEvent(input$rhistrandom, priority = 2, ignoreInit = T, {
     
-    rhistrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    rhistrandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
     rhistrandbutton$r2 <- sample(1:length(varnames2.2$df), 1)
     
     
-    if("Main Var." %in% input$rhistrand_choice) {rhistvariables$var <- names(dataset())[[rhistrandbutton$r1]]}
+    if("Main Var." %in% input$rhistrand_choice) {rhistvariables$var <- names(dataset_all$l)[[rhistrandbutton$r1]]}
     
     if("Color Var." %in% input$rhistrand_choice) {rhistvariables$color <- varnames2.1$df[[rhistrandbutton$r2]]}
     
@@ -2235,7 +2245,7 @@ server <- function(input, output){
   observeEvent(input$rhist1, ignoreInit = T, {
     
     rhistdata$l <- 
-      dataset() %>% 
+      dataset_all$l %>% 
       select_("ID", input$rhistvar) %>%
       mutate_at(input$rhistvar, as.factor) %>%
       left_join(stratify_vars2.1$df2) %>%
@@ -2243,7 +2253,7 @@ server <- function(input, output){
     
     
     rhistdata$m <-
-      dataset() %>% 
+      dataset_all$l %>% 
       select_("ID", input$rhistvar) %>%
       mutate_at(input$rhistvar, as.factor) %>%
       left_join(stratify_vars2.1$df2) %>% 
@@ -2384,13 +2394,13 @@ server <- function(input, output){
   
   observeEvent(input$helper2.2button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
     
-    if(is.null(dataset())|is.null(input$rboxplotvar)|is.null(stratify_vars$df_full)) {NULL}
+    if(is.null(dataset_all$l)|is.null(input$rboxplotvar)|is.null(stratify_vars$df_full)) {NULL}
     
     else {
       
       helper2.2$l <-
         
-        if (is.numeric(dataset()[[input$rboxplotvar]])) {
+        if (is.numeric(dataset_all$l[[input$rboxplotvar]])) {
           
           helpertable(stratify_vars$df_full, sym(input$rboxplotvar))
           
@@ -2443,7 +2453,7 @@ server <- function(input, output){
   
   
   #Select main variable
-  output$rboxplotvar <- renderUI({selectInput('rboxplotvar', 'Main Variable:', c(names(dataset())), selected = rboxplotvariables$var, selectize=TRUE)})
+  output$rboxplotvar <- renderUI({selectInput('rboxplotvar', 'Main Variable:', c(names(dataset_all$l)), selected = rboxplotvariables$var, selectize=TRUE)})
   
   
   
@@ -2542,7 +2552,7 @@ server <- function(input, output){
   #Default boxplot variable
   observeEvent(input$go, priority = -1, {
     
-    rboxplotvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    rboxplotvariables$var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
   })
   
@@ -2550,12 +2560,12 @@ server <- function(input, output){
   
   observeEvent(input$rboxplotrandom, priority = 2, ignoreInit = T, {
     
-    rboxplotrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    rboxplotrandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
     rboxplotrandbutton$r2 <- sample(1:length(varnames2.2$df), 1)
 
     
-    if("Main Var." %in% input$rboxplotrand_choice) {rboxplotvariables$var <- names(dataset())[[rboxplotrandbutton$r1]]}
+    if("Main Var." %in% input$rboxplotrand_choice) {rboxplotvariables$var <- names(dataset_all$l)[[rboxplotrandbutton$r1]]}
     
     if("Color Var." %in% input$rboxplotrand_choice) {rboxplotvariables$color <- varnames2.2$df[[rboxplotrandbutton$r2]]}
     
@@ -2570,7 +2580,7 @@ server <- function(input, output){
   
     
     rboxplotdata$l <- 
-      dataset() %>% 
+      dataset_all$l %>% 
       select_("ID", "timepoint", input$rboxplotvar) %>%
       group_by_("ID") %>%
       summarise_all(mymean) %>%
@@ -2578,7 +2588,7 @@ server <- function(input, output){
     
     #time of day boxplot
     rboxplotdata$m <- 
-      dataset() %>% 
+      dataset_all$l %>% 
       select_("ID", "timepoint", "timeofday", input$rboxplotvar) %>%
       group_by_("ID", "timeofday") %>%
       summarise_all(mymean)
@@ -2744,13 +2754,13 @@ server <- function(input, output){
   
   observeEvent(input$helper2.3button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
     
-    if(is.null(dataset())|is.null(input$rhistvar)|is.null(stratify_vars$df_full)) {NULL}
+    if(is.null(dataset_all$l)|is.null(input$rhistvar)|is.null(stratify_vars$df_full)) {NULL}
     
     else {
       
       helper2.3$l <-
         
-        if (is.numeric(dataset()[[input$rhistvar]])) {
+        if (is.numeric(dataset_all$l[[input$rhistvar]])) {
           
           helpertable(stratify_vars$df_full, sym(input$rhistvar))
           
@@ -2803,7 +2813,7 @@ server <- function(input, output){
   
   
   #Select main variable
-  output$rheatmapvar <- renderUI({selectInput('rheatmapvar', 'Main Variable:', c(names(dataset())), selected = rheatmapvariables$var, selectize=TRUE)})
+  output$rheatmapvar <- renderUI({selectInput('rheatmapvar', 'Main Variable:', c(names(dataset_all$l)), selected = rheatmapvariables$var, selectize=TRUE)})
   
   
   
@@ -2876,7 +2886,7 @@ server <- function(input, output){
   #default heatmap var
   observeEvent(input$go, priority = -1, {
    
-  rheatmapvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+  rheatmapvariables$var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
   
   })
   
@@ -2886,12 +2896,12 @@ server <- function(input, output){
   
   observeEvent(input$rheatmaprandom, priority = 2, ignoreInit = T, {
     
-    rheatmaprandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    rheatmaprandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
     rheatmaprandbutton$r2 <- sample(1:length(varnames2.3$df), 1)
     
     
-    if("Main Var." %in% input$rheatmaprand_choice) {rheatmapvariables$var <- names(dataset())[[rheatmaprandbutton$r1]]}
+    if("Main Var." %in% input$rheatmaprand_choice) {rheatmapvariables$var <- names(dataset_all$l)[[rheatmaprandbutton$r1]]}
     
     if("Order Var." %in% input$rheatmaprand_choice) {rheatmapvariables$order <- varnames2.3$df[[rheatmaprandbutton$r2]]}
     
@@ -2910,7 +2920,7 @@ server <- function(input, output){
     
     if(input$rheatmaporder %in% "None"){
     
-        dataset() %>% 
+        dataset_all$l %>% 
           select_("ID", "timepoint", input$rheatmapvar) %>%
           group_by_("ID") %>%
           summarise_all(mymean) %>%
@@ -2920,7 +2930,7 @@ server <- function(input, output){
     
     else if (input$rheatmaporder %in% "Response") {
       
-      dataset() %>% 
+      dataset_all$l %>% 
         select_("ID", "timepoint", input$rheatmapvar) %>%
         group_by_("ID") %>%
         summarise_all(mymean) %>%
@@ -2930,7 +2940,7 @@ server <- function(input, output){
     
     else {
     
-      dataset() %>% 
+      dataset_all$l %>% 
         select_("ID", "timepoint", input$rheatmapvar) %>%
         group_by_("ID") %>%
         summarise_all(mymean) %>%
@@ -2944,7 +2954,7 @@ server <- function(input, output){
     
     if (input$rheatmapraw %in% "raw") {
       
-        dataset() %>% 
+        dataset_all$l %>% 
         select_("ID", "timeofday", "weekday", input$rheatmapvar) %>%
         group_by_("ID", input$rheatmapstrat) %>%
         summarise_all(mymean) %>%
@@ -2955,7 +2965,7 @@ server <- function(input, output){
       
       if (input$rheatmapvar %in% "ID") {
         
-        dataset() %>% 
+        dataset_all$l %>% 
           select_("ID", "timeofday", "weekday", input$rheatmapvar) %>%
           group_by_("ID", input$rheatmapstrat) %>%
           summarise_all(mymean) %>%
@@ -2964,7 +2974,7 @@ server <- function(input, output){
       
       else {
    
-        dataset() %>% 
+        dataset_all$l %>% 
         select_("ID", "timeofday", "weekday", input$rheatmapvar) %>%
         group_by_("ID") %>%
         mutate_at(input$rheatmapvar, .funs = funs(normalize)) %>%
@@ -3128,13 +3138,13 @@ server <- function(input, output){
   
   observeEvent(input$helper2.4button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
     
-    if(is.null(dataset())|is.null(input$rtrajvar)|is.null(stratify_vars$df_full)) {NULL}
+    if(is.null(dataset_all$l)|is.null(input$rtrajvar)|is.null(stratify_vars$df_full)) {NULL}
     
     else {
       
       helper2.4$l <-
         
-        if (is.numeric(dataset()[[input$rtrajvar]])) {
+        if (is.numeric(dataset_all$l[[input$rtrajvar]])) {
           
           helpertable(stratify_vars$df_full, sym(input$rtrajvar))
           
@@ -3189,7 +3199,7 @@ server <- function(input, output){
   
   
   #Select main variable
-  output$rtrajvar <- renderUI({selectInput('rtrajvar', 'Main Variable:', c(names(dataset())), selected = rtrajvariables$var, selectize=TRUE)})
+  output$rtrajvar <- renderUI({selectInput('rtrajvar', 'Main Variable:', c(names(dataset_all$l)), selected = rtrajvariables$var, selectize=TRUE)})
   
   
   #Select coloring variable
@@ -3296,7 +3306,7 @@ server <- function(input, output){
   #Default traj variable
   observeEvent(input$go, priority = -1, {
     
-    rtrajvariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    rtrajvariables$var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
   })
   
@@ -3304,12 +3314,12 @@ server <- function(input, output){
   
   observeEvent(input$rtrajrandom, priority = 2, ignoreInit = T, {
     
-    rtrajrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    rtrajrandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
     rtrajrandbutton$r2 <- sample(1:length(varnames2.2$df), 1)
     
     
-    if("Main Var." %in% input$rtrajrand_choice) {rtrajvariables$var <- names(dataset())[[rtrajrandbutton$r1]]}
+    if("Main Var." %in% input$rtrajrand_choice) {rtrajvariables$var <- names(dataset_all$l)[[rtrajrandbutton$r1]]}
     
     if("Color Var." %in% input$rtrajrand_choice) {rtrajvariables$color <- varnames2.4$df[[rtrajrandbutton$r2]]}
     
@@ -3327,7 +3337,7 @@ server <- function(input, output){
     if (input$rtrajraw %in% "Raw" | input$rtrajvar %in% "ID") {
       
       rtrajdata$l <- 
-        dataset() %>% 
+        dataset_all$l %>% 
         select_("ID", "timepoint", "weekday", "weekday_n", "weektime_n", "day",  input$rtrajvar) %>%
         left_join(stratify_vars2.4$df2, by="ID") 
       
@@ -3338,7 +3348,7 @@ server <- function(input, output){
     else if (input$rtrajraw %in% "Subject Normalized") {
       
       rtrajdata$l <- 
-        dataset() %>% 
+        dataset_all$l %>% 
         select_("ID", "timepoint", "weekday", "weekday_n", "weektime_n", "day",  input$rtrajvar) %>%
         group_by_("ID") %>%
         mutate_at(input$rtrajvar, funs(normalize)) %>%
@@ -3519,13 +3529,13 @@ server <- function(input, output){
   
   observeEvent(input$helper2.5button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
     
-    if(is.null(dataset())|is.null(input$scatterplot_x_var)|is.null(stratify_vars$df_full)) {NULL}
+    if(is.null(dataset_all$l)|is.null(input$scatterplot_x_var)|is.null(stratify_vars$df_full)) {NULL}
     
     else {
       
       helper2.5$l <-
         
-        if (is.numeric(dataset()[[input$scatterplot_x_var]])) {
+        if (is.numeric(dataset_all$l[[input$scatterplot_x_var]])) {
           
           helpertable(stratify_vars$df_full, sym(input$scatterplot_x_var))
           
@@ -3577,10 +3587,10 @@ server <- function(input, output){
   })
   
   ##Select y axis variable:
-  output$scatterplot_y_var <- renderUI({selectInput('scatterplot_y_var', 'Y-Axis Variable:', c(names(dataset())), selected = scatterplotvariables$y_var, selectize=TRUE)})
+  output$scatterplot_y_var <- renderUI({selectInput('scatterplot_y_var', 'Y-Axis Variable:', c(names(dataset_all$l)), selected = scatterplotvariables$y_var, selectize=TRUE)})
   
   ##Select x axis variable
-  output$scatterplot_x_var <- renderUI({selectInput('scatterplot_x_var', 'X-Axis Variable:', c(names(dataset())), selected = scatterplotvariables$x_var, selectize=TRUE)})
+  output$scatterplot_x_var <- renderUI({selectInput('scatterplot_x_var', 'X-Axis Variable:', c(names(dataset_all$l)), selected = scatterplotvariables$x_var, selectize=TRUE)})
   
   ##Color/interaction datasets
   stratify_vars2.5 <- reactiveValues(df = NULL, df2 = NULL)
@@ -3606,7 +3616,7 @@ server <- function(input, output){
     
     if (input$scatterplotlevel %in% "Subject") {
       
-      dataset_levels2.5$df <- dataset() %>% 
+      dataset_levels2.5$df <- dataset_all$l %>% 
         select_("ID", input$scatterplot_y_var, input$scatterplot_x_var) %>% mutate(dummy=1) %>%
         group_by(ID) %>%
         summarise_all(function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
@@ -3620,7 +3630,7 @@ server <- function(input, output){
     
     else if (input$scatterplotlevel %in% "Day") {
       
-      dataset_levels2.5$df <- dataset() %>% 
+      dataset_levels2.5$df <- dataset_all$l %>% 
         select_("ID", "day", input$scatterplot_y_var, input$scatterplot_x_var) %>% mutate(dummy=1) %>%
         group_by(ID, day) %>%
         summarise_all(function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
@@ -3633,7 +3643,7 @@ server <- function(input, output){
     
     else if (input$subbrowselevel %in% "Assessment") {
       
-      dataset_levels2.5$df <- dataset() %>% select_("ID", "timeindex", "day", input$scatterplot_y_var, input$scatterplot_x_var) %>% mutate(dummy=1)
+      dataset_levels2.5$df <- dataset_all$l %>% select_("ID", "timeindex", "day", input$scatterplot_y_var, input$scatterplot_x_var) %>% mutate(dummy=1)
     }
   })
   
@@ -3822,9 +3832,9 @@ server <- function(input, output){
   #default scatterplot vars
   observeEvent(input$go, priority = -1, {
     
-    scatterplotvariables$x_var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    scatterplotvariables$x_var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
-    scatterplotvariables$y_var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    scatterplotvariables$y_var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
   })
   
@@ -3832,16 +3842,16 @@ server <- function(input, output){
   
   observeEvent(input$scatterplotrandom, priority = 2, ignoreInit = T, {
     
-    scatterplotrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    scatterplotrandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
-    scatterplotrandbutton$r2 <- sample(1:length(names(dataset())), 1)
+    scatterplotrandbutton$r2 <- sample(1:length(names(dataset_all$l)), 1)
     
     scatterplotrandbutton$r3 <- sample(1:length(varnames2.5$df), 1)
     
     
-    if("X-Axis Var." %in% input$scatterplotrand_choice) {scatterplotvariables$x_var <- names(dataset())[[scatterplotrandbutton$r1]]}
+    if("X-Axis Var." %in% input$scatterplotrand_choice) {scatterplotvariables$x_var <- names(dataset_all$l)[[scatterplotrandbutton$r1]]}
     
-    if("Y-Axis Var." %in% input$scatterplotrand_choice) {scatterplotvariables$y_var <- names(dataset())[[scatterplotrandbutton$r1]]}
+    if("Y-Axis Var." %in% input$scatterplotrand_choice) {scatterplotvariables$y_var <- names(dataset_all$l)[[scatterplotrandbutton$r1]]}
     
     if ("Color Var." %in% input$scatterplotrand_choice) {scatterplotvariables$color <- varnames2.5$df[[scatterplotrandbutton$r3]]}
     
@@ -3942,10 +3952,10 @@ server <- function(input, output){
   #6i) Subject scatterplot------------------------------------------------------------------------------------------------------------------------------
   
   ##Select y axis variable:
-  output$subscatter_y_var <- renderUI({selectInput('subscatter_y_var', 'Y-Axis Variable:', c(names(dataset())), selected = subscattervariables$y_var, selectize=TRUE)})
+  output$subscatter_y_var <- renderUI({selectInput('subscatter_y_var', 'Y-Axis Variable:', c(names(dataset_all$l)), selected = subscattervariables$y_var, selectize=TRUE)})
   
   ##Select x axis variable
-  output$subscatter_x_var <- renderUI({selectInput('subscatter_x_var', 'X-Axis Variable:', c(names(dataset())), selected = subscattervariables$x_var, selectize=TRUE)})
+  output$subscatter_x_var <- renderUI({selectInput('subscatter_x_var', 'X-Axis Variable:', c(names(dataset_all$l)), selected = subscattervariables$x_var, selectize=TRUE)})
   
   ##Color/interaction datasets
   stratify_vars3.15 <- reactiveValues(df = NULL, df2 = NULL, df3 = NULL)
@@ -3972,7 +3982,7 @@ server <- function(input, output){
     
     if (input$subscatterlevel %in% "Day") {
       
-      dataset_levels3.15$df <- dataset() %>% 
+      dataset_levels3.15$df <- dataset_all$l %>% 
         select_("ID", "day", input$subscatter_y_var, input$subscatter_x_var) %>% mutate(dummy=1) %>%
         group_by(ID, day) %>%
         summarise_all(function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
@@ -3985,7 +3995,7 @@ server <- function(input, output){
     
     else if (input$subbrowselevel %in% "Assessment") {
       
-      dataset_levels3.15$df <- dataset() %>% select_("ID", "timeindex", input$subscatter_y_var, input$subscatter_x_var) %>% mutate(dummy=1)
+      dataset_levels3.15$df <- dataset_all$l %>% select_("ID", "timeindex", input$subscatter_y_var, input$subscatter_x_var) %>% mutate(dummy=1)
     }
   })
   
@@ -4161,9 +4171,9 @@ server <- function(input, output){
   #default subscatter vars
   observeEvent(input$go, priority = -1, {
     
-    subscattervariables$x_var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    subscattervariables$x_var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
-    subscattervariables$y_var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    subscattervariables$y_var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
   })
   
@@ -4171,16 +4181,16 @@ server <- function(input, output){
   
   observeEvent(input$subscatterrandom, priority = 2, ignoreInit = T, {
     
-    subscatterrandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    subscatterrandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
-    subscatterrandbutton$r2 <- sample(1:length(names(dataset())), 1)
+    subscatterrandbutton$r2 <- sample(1:length(names(dataset_all$l)), 1)
     
     subscatterrandbutton$r3 <- sample(1:length(varnames3.15$df), 1)
     
     
-    if("X-Axis Var." %in% input$subscatterrand_choice) {subscattervariables$x_var <- names(dataset())[[subscatterrandbutton$r1]]}
+    if("X-Axis Var." %in% input$subscatterrand_choice) {subscattervariables$x_var <- names(dataset_all$l)[[subscatterrandbutton$r1]]}
     
-    if("Y-Axis Var." %in% input$subscatterrand_choice) {subscattervariables$y_var <- names(dataset())[[subscatterrandbutton$r2]]}
+    if("Y-Axis Var." %in% input$subscatterrand_choice) {subscattervariables$y_var <- names(dataset_all$l)[[subscatterrandbutton$r2]]}
     
     if ("Color Var." %in% input$subscatterrand_choice) {subscattervariables$color <- varnames3.15$df[[subscatterrandbutton$r3]]}
     
@@ -4311,7 +4321,7 @@ server <- function(input, output){
   #6j) Subject meanbrowse------------------------------------------------------------------------------------------------------------------------------
 
   ##Select main y axis variable:
-  output$meanbrowsevar <- renderUI({selectInput('meanbrowsevar', 'Main Variable:', c(names(dataset())), selected = meanbrowsevariables$var, selectize=TRUE)})
+  output$meanbrowsevar <- renderUI({selectInput('meanbrowsevar', 'Main Variable:', c(names(dataset_all$l)), selected = meanbrowsevariables$var, selectize=TRUE)})
   
   ##Color and order datasets
   stratify_vars3.1 <- reactiveValues(df = NULL, df2 = NULL, df3 = NULL)
@@ -4489,7 +4499,7 @@ server <- function(input, output){
   #Default random var
   observeEvent(input$go, priority = -1, {
     
-    meanbrowsevariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    meanbrowsevariables$var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
   })
   
@@ -4497,14 +4507,14 @@ server <- function(input, output){
   
   observeEvent(input$meanbrowserandom, priority = 2, ignoreInit = T, {
     
-    meanbrowserandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    meanbrowserandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
     meanbrowserandbutton$r2 <- sample(1:length(varnames3.1$df), 1)
     
     meanbrowserandbutton$r3 <- sample(1:length(varnames3.1$df), 1)
     
     
-    if("Main Var." %in% input$meanbrowserand_choice) {meanbrowsevariables$var <- names(dataset())[[meanbrowserandbutton$r1]]}
+    if("Main Var." %in% input$meanbrowserand_choice) {meanbrowsevariables$var <- names(dataset_all$l)[[meanbrowserandbutton$r1]]}
     
     if("Color Var." %in% input$meanbrowserand_choice) {meanbrowsevariables$color <- varnames3.1$df[[meanbrowserandbutton$r2]]}
     
@@ -4523,7 +4533,7 @@ server <- function(input, output){
     
     if (input$meanbrowseraw %in% "Raw" | input$meanbrowsevar %in% "ID") {
       
-      dataset() %>% 
+      dataset_all$l %>% 
         select_("ID", "timepoint", "weekday_n", input$meanbrowsevar) %>%
         left_join(stratify_vars3.1$df2, by="ID") %>%
         left_join(stratify_vars3.1$df3, by="ID") %>%
@@ -4533,7 +4543,7 @@ server <- function(input, output){
     
     else if (input$meanbrowseraw %in% "Subject Normalized") {
       
-      dataset() %>% 
+      dataset_all$l %>% 
         select_("ID", "timepoint", "weekday_n", input$meanbrowsevar) %>%
         group_by_("ID") %>%
         mutate_at(input$meanbrowsevar, funs(normalize)) %>%
@@ -4619,7 +4629,7 @@ server <- function(input, output){
   #6k) Subject trajectory------------------------------------------------------------------------------------------------------------------------------
   
   ##Select main y axis variable:
-  output$subbrowsevar <- renderUI({selectInput('subbrowsevar', 'Main Variable:', c(names(dataset())), selected = subbrowsevariables$var, selectize=TRUE)})
+  output$subbrowsevar <- renderUI({selectInput('subbrowsevar', 'Main Variable:', c(names(dataset_all$l)), selected = subbrowsevariables$var, selectize=TRUE)})
   
   ##Color and order datasets:
   stratify_vars3.2 <- reactiveValues(df = NULL, df2 = NULL, df3 = NULL)
@@ -4644,7 +4654,7 @@ server <- function(input, output){
       
       if (input$subbrowselevel %in% "Day") {
         
-        dataset_levels$df <- dataset() %>% 
+        dataset_levels$df <- dataset_all$l %>% 
           select_("ID", "day", input$subbrowsevar) %>% mutate(dummy=1) %>%
           group_by(ID, day) %>%
           summarise_all(function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
@@ -4657,7 +4667,7 @@ server <- function(input, output){
       
       else if (input$subbrowselevel %in% "Assessment") {
         
-        dataset_levels$df <- dataset() %>% select_("ID", "timeindex", "day", input$subbrowsevar) %>% mutate(dummy=1)
+        dataset_levels$df <- dataset_all$l %>% select_("ID", "timeindex", "day", input$subbrowsevar) %>% mutate(dummy=1)
         
         
         
@@ -4919,7 +4929,7 @@ server <- function(input, output){
   #Random defaults
   observeEvent(input$go, priority = -1, {
     
-    subbrowsevariables$var <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    subbrowsevariables$var <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
   })
   
@@ -4927,14 +4937,14 @@ server <- function(input, output){
   
   observeEvent(input$subbrowserandom, priority = 2, ignoreInit = T, {
     
-    subbrowserandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    subbrowserandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
     subbrowserandbutton$r2 <- sample(1:length(varnames3.2$df), 1)
     
     subbrowserandbutton$r3 <- sample(1:length(varnames3.2$df), 1)
     
     
-    if("Main Var." %in% input$subbrowserand_choice) {subbrowsevariables$var <- names(dataset())[[subbrowserandbutton$r1]]}
+    if("Main Var." %in% input$subbrowserand_choice) {subbrowsevariables$var <- names(dataset_all$l)[[subbrowserandbutton$r1]]}
     
     if("Color Var." %in% input$subbrowserand_choice) {subbrowsevariables$color <- varnames3.2$df[[subbrowserandbutton$r2]]}
     
@@ -5035,7 +5045,7 @@ server <- function(input, output){
               scale_color_distiller(palette = "Spectral") +
               facet_wrap(~ID_val, nrow = 4) + 
               theme_bw(base_size = 18) +
-              scale_x_continuous(breaks = seq(1, max(dataset()$timeindex), by=max(dataset()$timepoint)))
+              scale_x_continuous(breaks = seq(1, max(dataset_all$l$timeindex), by=max(dataset_all$l$timepoint)))
             
           }
           
@@ -5046,7 +5056,7 @@ server <- function(input, output){
               geom_point(size = 3.5, aes_string(color = varcolor3.2$l))+
               facet_wrap(~ID_val, nrow = 4) + 
               theme_bw(base_size = 18) +
-              scale_x_continuous(breaks = seq(1, max(dataset()$timeindex), by=max(dataset()$timepoint)))
+              scale_x_continuous(breaks = seq(1, max(dataset_all$l$timeindex), by=max(dataset_all$l$timepoint)))
             
           }
           
@@ -5063,7 +5073,7 @@ server <- function(input, output){
               scale_color_distiller(palette = "Spectral") +
               facet_wrap(~ID_val, nrow = 4) + 
               theme_bw(base_size = 18) +
-              scale_x_continuous(breaks = c(1:max(dataset()$day)))
+              scale_x_continuous(breaks = c(1:max(dataset_all$l$day)))
             
           }
           
@@ -5074,7 +5084,7 @@ server <- function(input, output){
               geom_point(size = 3.5, aes_string(color = varcolor3.2$l))+
               facet_wrap(~ID_val, nrow = 4) + 
               theme_bw(base_size = 18) +
-              scale_x_continuous(breaks = c(1:max(dataset()$day)))
+              scale_x_continuous(breaks = c(1:max(dataset_all$l$day)))
             
           }
           
@@ -5096,7 +5106,7 @@ server <- function(input, output){
   
   observeEvent(input$helper3.3button, ignoreInit = T, { withProgress(message = 'Loading Helper Table', {
     
-    if(is.null(dataset())|is.null(input$subcomparevar1) |is.null(input$subcomparevar2)|is.null(stratify_vars$df_full)) {NULL}
+    if(is.null(dataset_all$l)|is.null(input$subcomparevar1) |is.null(input$subcomparevar2)|is.null(stratify_vars$df_full)) {NULL}
     
     else {
       
@@ -5149,11 +5159,11 @@ server <- function(input, output){
   
   
   ##Select variable 1
-  output$subcomparevar1 <- renderUI({selectInput('subcomparevar1', 'Top Variable:', c(names(dataset())), selected = subcomparevariables$var1, selectize=TRUE)})
+  output$subcomparevar1 <- renderUI({selectInput('subcomparevar1', 'Top Variable:', c(names(dataset_all$l)), selected = subcomparevariables$var1, selectize=TRUE)})
   
   
   ##select variable 2
-  output$subcomparevar2 <- renderUI({selectInput('subcomparevar2', 'Bottom Variable:', c(names(dataset())), selected = subcomparevariables$var2, selectize=TRUE)})
+  output$subcomparevar2 <- renderUI({selectInput('subcomparevar2', 'Bottom Variable:', c(names(dataset_all$l)), selected = subcomparevariables$var2, selectize=TRUE)})
   
   
   ##Color datasets:
@@ -5178,7 +5188,7 @@ server <- function(input, output){
     
     if (input$subcomparelevel %in% "Day") {
       
-      dataset_levels3.3$df <- dataset() %>% 
+      dataset_levels3.3$df <- dataset_all$l %>% 
         select_("ID", "day", input$subcomparevar1, input$subcomparevar2) %>% mutate(dummy=1) %>%
         group_by(ID, day) %>%
         summarise_all(function(x) { y <- ifelse(is.character(x) | is.factor(x), getmode(x),
@@ -5191,7 +5201,7 @@ server <- function(input, output){
     
     else if (input$subcomparelevel %in% "Assessment") {
       
-      dataset_levels3.3$df <- dataset() %>% select_("ID", "timeindex", "day", input$subcomparevar1, input$subcomparevar2) %>% mutate(dummy=1)
+      dataset_levels3.3$df <- dataset_all$l %>% select_("ID", "timeindex", "day", input$subcomparevar1, input$subcomparevar2) %>% mutate(dummy=1)
       
       
       
@@ -5334,7 +5344,7 @@ server <- function(input, output){
   
   
   #subject selector
-  output$subcomparesubject <- renderUI({selectInput('subcomparesubject', 'Select Subject:', c(unique(dataset()$ID)), selected = subcomparevariables$subject, selectize=TRUE)})
+  output$subcomparesubject <- renderUI({selectInput('subcomparesubject', 'Select Subject:', c(unique(dataset_all$l$ID)), selected = subcomparevariables$subject, selectize=TRUE)})
   
   
   
@@ -5350,11 +5360,11 @@ server <- function(input, output){
   #Random defaults
   observeEvent(input$go, priority = -1, {
     
-    subcomparevariables$var1 <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    subcomparevariables$var1 <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
-    subcomparevariables$var2 <- names(dataset())[[sample(1:length(names(dataset())), 1)]]
+    subcomparevariables$var2 <- names(dataset_all$l)[[sample(1:length(names(dataset_all$l)), 1)]]
     
-    subcomparevariables$subject <- unique(dataset()$ID)[[sample(1:length(unique(dataset()$ID)), 1)]]
+    subcomparevariables$subject <- unique(dataset_all$l$ID)[[sample(1:length(unique(dataset_all$l$ID)), 1)]]
     
   })
   
@@ -5362,22 +5372,22 @@ server <- function(input, output){
   
   observeEvent(input$subcomparerandom, priority = 2, ignoreInit = T, {
     
-    subcomparerandbutton$r1 <- sample(1:length(names(dataset())), 1)
+    subcomparerandbutton$r1 <- sample(1:length(names(dataset_all$l)), 1)
     
-    subcomparerandbutton$r2 <- sample(1:length(names(dataset())), 1)
+    subcomparerandbutton$r2 <- sample(1:length(names(dataset_all$l)), 1)
     
     subcomparerandbutton$r3 <- sample(1:length(varnames3.3$df), 1)
     
-    subcomparerandbutton$r4 <- sample(1:length(unique(dataset()$ID)), 1)
+    subcomparerandbutton$r4 <- sample(1:length(unique(dataset_all$l$ID)), 1)
     
     
-    if("Top Var." %in% input$subcomparerand_choice) {subcomparevariables$var1 <- names(dataset())[[subcomparerandbutton$r1]]}
+    if("Top Var." %in% input$subcomparerand_choice) {subcomparevariables$var1 <- names(dataset_all$l)[[subcomparerandbutton$r1]]}
     
-    if("Bottom Var." %in% input$subcomparerand_choice) {subcomparevariables$var2 <- names(dataset())[[subcomparerandbutton$r2]]}
+    if("Bottom Var." %in% input$subcomparerand_choice) {subcomparevariables$var2 <- names(dataset_all$l)[[subcomparerandbutton$r2]]}
     
     if ("Color Var." %in% input$subcomparerand_choice) {subcomparevariables$color <- varnames3.3$df[[subcomparerandbutton$r3]]}
     
-    if ("Subject" %in% input$subcomparerand_choice) {subcomparevariables$order <- unique(dataset()$ID)[[subcomparerandbutton$r4]]}
+    if ("Subject" %in% input$subcomparerand_choice) {subcomparevariables$order <- unique(dataset_all$l$ID)[[subcomparerandbutton$r4]]}
     
   })
   
@@ -5496,7 +5506,7 @@ server <- function(input, output){
                     scale_color_distiller(palette = "Spectral") +
                     facet_wrap(~variable, nrow = 2, scales = "free_y") + 
                     theme_bw(base_size = 14) +
-                    scale_x_continuous(breaks = seq(1, max(dataset()$timeindex), by=max(dataset()$timepoint)))+
+                    scale_x_continuous(breaks = seq(1, max(dataset_all$l$timeindex), by=max(dataset_all$l$timepoint)))+
                     ggtitle(paste0("Subject ", input$subcomparesubject))
                     )
                   
@@ -5509,7 +5519,7 @@ server <- function(input, output){
                     geom_point(size = 2, aes_string(color = varcolor3.3$l))+
                     facet_wrap(~variable, nrow = 2, scales = "free_y") + 
                     theme_bw(base_size = 14) +
-                    scale_x_continuous(breaks = seq(1, max(dataset()$timeindex), by=max(dataset()$timepoint)))+
+                    scale_x_continuous(breaks = seq(1, max(dataset_all$l$timeindex), by=max(dataset_all$l$timepoint)))+
                     ggtitle(paste0("Subject ", input$subcomparesubject))
                   )
                   
@@ -5528,7 +5538,7 @@ server <- function(input, output){
                     scale_color_distiller(palette = "Spectral") +
                     facet_wrap(~variable, nrow = 2, scales = "free_y") + 
                     theme_bw(base_size = 14) +
-                    scale_x_continuous(breaks = c(1:max(dataset()$day)))+
+                    scale_x_continuous(breaks = c(1:max(dataset_all$l$day)))+
                     ggtitle(paste0("Subject ", input$subcomparesubject))
                   )
                   
@@ -5541,7 +5551,7 @@ server <- function(input, output){
                     geom_point(size = 2, aes_string(color = varcolor3.3$l))+
                     facet_wrap(~variable, nrow = 2, scales = "free_y") + 
                     theme_bw(base_size = 14) +
-                    scale_x_continuous(breaks = c(1:max(dataset()$day))) +
+                    scale_x_continuous(breaks = c(1:max(dataset_all$l$day))) +
                     ggtitle(paste0("Subject ", input$subcomparesubject))
                   )
                   
